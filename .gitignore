@@ -1,0 +1,30 @@
+# MIB harness — pull separately
+MIB/
+
+# Python venv
+.venv*/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Run outputs
+logs/
+submissions/
+models/
+signatures/
+
+# Local results JSON dumps that aren't checked in (we curate which ones land in mib_submission/results/)
+*.tmp.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp

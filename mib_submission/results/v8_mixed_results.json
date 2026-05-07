@@ -1,0 +1,505 @@
+{
+  "method_name": "submission",
+  "model_name": "Qwen2ForCausalLM",
+  "task_name": "4_answer_MCQA",
+  "dataset": {
+    "answerPosition_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.94
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.96
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.96
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.96
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.96
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        }
+      }
+    },
+    "randomLetter_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.46153846153846156
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.6153846153846154
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.5384615384615384
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.7307692307692307
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.8461538461538461
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.8461538461538461
+          }
+        }
+      }
+    },
+    "answerPosition_randomLetter_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.26666666666666666
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.23333333333333334
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.5666666666666667
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.5333333333333333
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.6333333333333333
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol_period"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.8333333333333334
+          }
+        }
+      }
+    }
+  }
+}
