@@ -42,12 +42,22 @@ MIB_TRACK = REPO_ROOT / "MIB" / "MIB-causal-variable-track"
 
 
 # Task module paths keyed by the task names in
-# ``MIB/MIB-causal-variable-track/verify_submission.py:TASKS``. Only the two
-# we plan to submit on are wired here; extend as we grow.
+# ``MIB/MIB-causal-variable-track/verify_submission.py:TASKS``. IOI is wired
+# only at the dataset level here; ``setup_residual_experiment`` cannot build
+# IOI bundles directly because ``ioi_task.get_causal_model`` requires a
+# learned ``{bias, token_coeff, position_coeff}`` dict — see
+# ``baselines/ioi_baselines/ioi_learn_linear_params.py`` for the bootstrap.
 _TASK_MODULES = {
     "4_answer_MCQA": "tasks.simple_MCQA.simple_MCQA",
     "arithmetic": "tasks.two_digit_addition_task.arithmetic",
+    "ARC_easy": "tasks.ARC.ARC",
+    "ravel_task": "tasks.RAVEL.ravel",
 }
+
+# Tasks whose ``get_causal_model`` is parameterless. IOI is intentionally not
+# in this set — its causal model depends on per-model linear params that must
+# be learned first. See the IOI bootstrap script (out of scope here).
+_PARAMETERLESS_CAUSAL_MODEL_TASKS = set(_TASK_MODULES)
 
 
 # Map our task-name keys to the HF model-class names declared in
@@ -127,6 +137,7 @@ def setup_residual_experiment(
     checker=None,
     filter_batch_size: int = 32,
     verbose: bool = False,
+    max_new_tokens: int = 1,
 ) -> ExperimentBundle:
     """Load dataset + model, filter, and build a PatchResidualStream experiment.
 
@@ -154,7 +165,7 @@ def setup_residual_experiment(
 
     if device is None:
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    pipeline = LMPipeline(model_name, max_new_tokens=1, device=device, dtype=dtype)
+    pipeline = LMPipeline(model_name, max_new_tokens=max_new_tokens, device=device, dtype=dtype)
     pipeline.tokenizer.padding_side = "left"
 
     actual_class = pipeline.model.__class__.__name__

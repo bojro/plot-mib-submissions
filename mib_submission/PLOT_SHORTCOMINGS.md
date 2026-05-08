@@ -57,13 +57,40 @@ PLOT trains DAS at the surviving sites. On MCQA we picked 5–7 sites versus DAS
 
 Practical implication: report the actual site count alongside IIA when comparing PLOT runs. Don't quote "10× speedup" without specifying the configuration.
 
-## What this means for the multi-cell rollout
+## 8. Stage B `top_k_grid=(1,2)` degenerates on tasks with only 2 token positions
 
-Per-cell expectations:
+Discovered with ARC (`get_token_positions` returns 2 positions: `correct_symbol`, `last_token`). Stage B's calibration is the *sum* of per-site IIA over the picks; adding a marginally-positive site never lowers the sum, so the grid prefers `top_k=2` and effectively keeps every (Stage-A-layer, token-position) combination. Cell 8 picked 7 sites where 4 would have sufficed; the extras failed to converge during DAS but were saved in the submission anyway. Best-per-split scoring rescued the IIA but DAS time was wasted.
 
-- **RAVEL** (`Country`, `Continent`, `Language` per entity): three observationally-distinct variables. V=1 collapse unlikely. Output-space late-layer bias may still bite if the localization variable is mid-network. Best PLOT candidate among the remaining cells.
-- **Arithmetic** (`ones_carry`): single variable. Need to construct V≥2 distinct rows somehow — either bucketing or adjacent variables. V=1 collapse risk is real.
-- **ARC_easy** (`answer_pointer`, `answer`): structurally similar to MCQA. Expect the same trade-off — one variable will be late and easy for PLOT, the other mid and harder.
-- **IOI** (`output_token`, `output_position`): two distinct outputs. May avoid V=1 collapse but the IOI causal model has its own structure (name positions, attention patterns) that may interact with output-space signatures unpredictably.
+**Mitigation**: for any task where `len(token_positions) ≤ 2`, set `stage_b_top_k_grid=(1,)`. Force Stage B to actually select.
 
-The honest expectation is that PLOT will land within ~5% of baseline DAS on most cells, possibly higher on cells where the localization variable is mid-network and we can't construct OT rows that probe it directly. The compute savings remain real across all cells.
+## 9. `correct_symbol` doesn't carry the variable in late ARC layers
+
+Empirical from cell 8 (ARC × Gemma × answer): every `last_token` site converged cleanly (DAS train accuracy → 1.0); only 1 of 4 `correct_symbol` sites did. Loss at the failing sites *climbed* during training (5.95 → 8.7) — classic noise-fitting signature when the underlying activation has no useful causal signal.
+
+Diagnosis: by late layers (L17–L25 in Gemma), the residual stream at the `correct_symbol` position has moved on to processing downstream context. The answer letter is generated at `last_token`, not at the symbol position. PLOT can pick those sites because Stage B gives them mass, but no orthogonal-rotation rescue exists — the activation simply doesn't carry the signal.
+
+Combined with #8, this means cells where the natural variable lives at one specific token position (e.g., `last_token` for ARC `answer`/`answer_pointer`) get bloat from Stage B's lax `top_k`. Future ARC config: layer-aware Stage B prior (prefer `last_token` at L≥mid_layer).
+
+## 10. Single-seed runs are samples, not results
+
+Every shipped cell is one DAS training run. DAS is stochastic: orthogonal init of the rotation, DataLoader shuffle, and (potentially) CUDA non-determinism in matmul backward all introduce variance. We have no estimate of that variance.
+
+Differences between shipped cells need to be read with this caveat:
+- Cell 4 (Gemma MCQA answer) = 0.908 vs cell 8 (Gemma ARC answer) = 0.923. 0.015 — could be within seed noise.
+- Cell 1 (Qwen MCQA pointer) = 0.956 vs cell 3 (Gemma MCQA pointer) = 0.955. Within 0.001.
+- Cell 7 (ARC pointer) = 0.884 vs cell 8 (ARC answer) = 0.923. 0.04 — big enough to be a real effect *if* seed variance is small.
+
+**To validate any cell's IIA as a "result," run it 3× with distinct seeds and report mean ± std.** Not done so far. Adding `--seed` to the CLI is straightforward but hasn't landed.
+
+## What this means for the multi-cell rollout (updated 2026-05-08)
+
+Per-cell expectations, refined by data from cells 1–8 + RAVEL Continent smoke:
+
+- **MCQA × Gemma**: validated. Cells 3 (`answer_pointer` = 0.955) and 4 (`answer` = 0.908) shipped. Both within 0.05 of cell 1's Qwen result.
+- **ARC × Gemma**: validated, with caveat. Cell 7 = 0.884, cell 8 = 0.923. The `top_k=2` Stage B and `correct_symbol`-doesn't-carry-answer issues (#8, #9) are now characterized but not yet fixed in the preset.
+- **RAVEL × Gemma × Continent**: smoke ran at 0.845 with tiny config (n_features=64, dataset_size=128, 1 epoch). Full-config rerun expected ≥0.90. **The cleanest PLOT result so far** — V=3 distinct attributes + per-row filter eliminates the no-op-base SNR drag that hurt MCQA-style runs.
+- **RAVEL × Gemma × {Country, Language}**: not yet run. Country has 160 distinct values (28 within-attribute first-token collisions); Language has 174 distinct values with **63% multi-token answers** — heaviest collision noise of the three RAVEL variables.
+- **Arithmetic** (`ones_carry`): single variable, V=1 collapse risk. Deferred; needs adjacent-variable workaround or bucketing.
+- **IOI** (`output_token`, `output_position`): two distinct outputs, V=2+ should work. **Bootstrap blocked** on per-model linear-parameter learning (`baselines/ioi_baselines/ioi_learn_linear_params.py`).
+
+The honest expectation is that PLOT lands within ~0.05 of baseline DAS on RAVEL and most MCQA cells, with larger gaps on harder splits or where the variable is mid-network. The compute savings (PLOT's 4-7 sites vs baseline DAS's 72) remain real across all shipped cells.

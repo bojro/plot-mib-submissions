@@ -5,8 +5,8 @@ All commands below assume the project venv at `../.venv-mib/`.
 
 ## Python
 
-- python 3.12.13 (homebrew `/opt/homebrew/opt/python@3.12`)
-- venv: `./.venv-mib/` (PEP 668 prevents system-wide installs into homebrew Python)
+- python 3.12.13 (originally homebrew on macOS; on Ubuntu/WSL installed via `uv python install 3.12`)
+- venv: `./.venv-mib/` (symlinked to `~/.venv-mib` on WSL since `/mnt/c` 9p mounts can't atomic-rename certain pip files)
 
 ## Pinned upstream commits
 
@@ -25,14 +25,28 @@ All commands below assume the project venv at `../.venv-mib/`.
 
 ## Reproducing the install
 
+WSL note: clone MIB outside `/mnt/c` (9p mounts reject git's chmod on lockfiles).
+
 ```bash
-git clone --recurse-submodules https://github.com/aaronmueller/MIB.git MIB || true
-python3.12 -m venv .venv-mib
-.venv-mib/bin/pip install --upgrade pip
-.venv-mib/bin/pip install -r MIB/MIB-causal-variable-track/requirements.txt
+# MIB (skip the SSH-only sub-submodule under MIB-circuit-track)
+git clone https://github.com/aaronmueller/MIB.git ~/MIB
+cd ~/MIB && git checkout b69dabe9899251d4a8fe90789afa4d655afc84c7
+git submodule update --init --recursive MIB-causal-variable-track
+cd -
+ln -sf ~/MIB MIB
+
+# Python 3.12 + venv (also outside /mnt/c)
+~/.local/bin/uv venv --python 3.12 ~/.venv-mib
+ln -sf ~/.venv-mib .venv-mib
+~/.local/bin/uv pip install --python ~/.venv-mib/bin/python \
+    -r MIB/MIB-causal-variable-track/requirements.txt
 ```
 
-(The `|| true` accommodates the EAP-IG SSH failure.)
+## NVIDIA driver requirement (WSL)
+
+`requirements.txt` pins `torch==2.11.0+cu130`, which needs **NVIDIA driver ≥ 555** on the Windows host (CUDA 13). On older drivers (12.3 = driver 546) `torch.cuda.is_available()` returns False and runs fall back to CPU. Update via NVIDIA App / GeForce Experience, then `wsl --shutdown` and reopen.
+
+Tested hardware: RTX 4060 Laptop (8 GB VRAM, 125 W max). Sufficient for Gemma-2-2B at fp16 with `train_batch_size=16` (some cells OOM at batch_size=32). **Insufficient** for Llama-3.1-8B at fp16 (would need ~16 GB VRAM).
 
 ## HF auth
 

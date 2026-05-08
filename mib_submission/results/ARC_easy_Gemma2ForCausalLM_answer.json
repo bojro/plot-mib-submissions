@@ -1,0 +1,235 @@
+{
+  "method_name": "submission",
+  "model_name": "Gemma2ForCausalLM",
+  "task_name": "ARC_easy",
+  "dataset": {
+    "answerPosition_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.17560975609756097
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.9707317073170731
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.6085365853658536
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.9975609756097561
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.05609756097560976
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.9963414634146341
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.9975609756097561
+          }
+        }
+      }
+    },
+    "randomLetter_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.14677419354838708
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.3258064516129032
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.8903225806451613
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.8
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.3064516129032258
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.7709677419354839
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.04838709677419355
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.6709677419354839
+          }
+        }
+      }
+    },
+    "answerPosition_randomLetter_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.09298245614035087
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.3385964912280702
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.8807017543859649
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.7491228070175439
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.30526315789473685
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.7315789473684211
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.05789473684210526
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.624561403508772
+          }
+        }
+      }
+    }
+  }
+}

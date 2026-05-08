@@ -1,0 +1,127 @@
+{
+  "method_name": "submission",
+  "model_name": "Gemma2ForCausalLM",
+  "task_name": "RAVEL",
+  "dataset": {
+    "prompt_template_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "last_token"
+          },
+          "Continent": {
+            "average_score": 0.7836538461538461
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-entity_last_token)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "entity_last_token"
+          },
+          "Continent": {
+            "average_score": 0.8365384615384616
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "last_token"
+          },
+          "Continent": {
+            "average_score": 0.3293269230769231
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-entity_last_token)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "entity_last_token"
+          },
+          "Continent": {
+            "average_score": 0.8533653846153846
+          }
+        }
+      }
+    },
+    "attribute_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "last_token"
+          },
+          "Continent": {
+            "average_score": 0.5610859728506787
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-entity_last_token)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "entity_last_token"
+          },
+          "Continent": {
+            "average_score": 0.8506787330316742
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "last_token"
+          },
+          "Continent": {
+            "average_score": 0.004524886877828055
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-entity_last_token)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "entity_last_token"
+          },
+          "Continent": {
+            "average_score": 0.8506787330316742
+          }
+        }
+      }
+    },
+    "wikipedia_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "last_token"
+          },
+          "Continent": {
+            "average_score": 0.026785714285714284
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-entity_last_token)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "entity_last_token"
+          },
+          "Continent": {
+            "average_score": 0.8214285714285714
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "last_token"
+          },
+          "Continent": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-entity_last_token)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "entity_last_token"
+          },
+          "Continent": {
+            "average_score": 0.8318452380952381
+          }
+        }
+      }
+    }
+  }
+}

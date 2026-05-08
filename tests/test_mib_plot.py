@@ -288,7 +288,13 @@ class EndToEndStub(unittest.TestCase):
         # Plant matching signature at L2/last_token only. To make IIA peak
         # there too, plant per-example argmax = source letter at that site;
         # everywhere else, argmax noise.
-        def _stub_collect_outputs(_bundle, _dataset, *, letters, batch_size=32, verbose=False):
+        from mib_submission.plot._alphabets import from_letters as _from_letters
+
+        def _stub_collect_outputs(_bundle, _dataset, *, alphabet=None, letters=None, batch_size=32, verbose=False):
+            # Match the new signature; either alphabet or letters may arrive.
+            if alphabet is None:
+                alphabet = _from_letters(letters)
+            letters_str = "".join(alphabet.labels)
             base_probs = torch.zeros(N, K)
             base_probs[:, 0] = 1.0  # base picks "A"
             base_argmax = torch.zeros(N, dtype=torch.long)
@@ -301,7 +307,7 @@ class EndToEndStub(unittest.TestCase):
                         probs = torch.zeros(N, K)
                         argm = torch.zeros(N, dtype=torch.long)
                         for i, ch in enumerate(expected_letters):
-                            j = letters.index(ch)
+                            j = letters_str.index(ch)
                             probs[i, j] = 1.0
                             argm[i] = j
                         cf_probs[(L, tok)] = probs
@@ -317,7 +323,7 @@ class EndToEndStub(unittest.TestCase):
                 base_alpha_argmax=base_argmax,
                 cf_alpha_probs=cf_probs,
                 cf_alpha_argmax=cf_argmax,
-                letters=letters,
+                alphabet=alphabet,
             )
 
         plot_pipeline.collect_neural_outputs = _stub_collect_outputs

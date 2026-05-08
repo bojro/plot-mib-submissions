@@ -23,16 +23,62 @@ Two essential differences from earlier ``answer_logit_delta``-based attempts:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 import torch
 
 from ..pipeline import ExperimentBundle, add_mib_to_syspath
-from ..signatures import alphabet_token_ids
 from ..site_keys import site_key_for_unit
+from ._alphabets import LabelAlphabet, from_letters, resolve_tokens
 
 
 SiteKey = Tuple[int, str]
+
+
+def _resolve_alphabet(
+    alphabet: Optional[LabelAlphabet], letters: Optional[str]
+) -> LabelAlphabet:
+    """Coerce the legacy ``letters: str`` arg into a ``LabelAlphabet`` if needed.
+
+    Functions accept either ``alphabet`` (the new explicit form) or ``letters``
+    (legacy MCQA/ARC convenience). At least one must be provided.
+    """
+    if alphabet is not None:
+        if letters:
+            raise ValueError("provide either `alphabet` or `letters`, not both")
+        return alphabet
+    if letters:
+        return from_letters(letters)
+    raise ValueError("must provide either `alphabet` or `letters`")
+
+
+def _iter_input_dicts(dataset) -> List[dict]:
+    """Yield raw input dicts from a CounterfactualDataset (for filtering)."""
+    inner = getattr(dataset, "dataset", None)
+    if inner is not None and hasattr(inner, "__len__") and hasattr(inner, "__getitem__"):
+        return [inner[i] for i in range(len(inner))]
+    return list(dataset)
+
+
+def _filter_dataset(dataset, predicate: Callable[[dict], bool]):
+    """Return a new CounterfactualDataset with examples passing ``predicate``.
+
+    Falls back to a list-of-dicts when the underlying object isn't a real HF
+    dataset (used in tests that pass python dicts directly).
+    """
+    inner = getattr(dataset, "dataset", None)
+    if inner is None or not (hasattr(inner, "filter") or hasattr(inner, "select")):
+        return [ex for ex in dataset if predicate(ex)]
+    if hasattr(inner, "filter"):
+        from copy import copy as _copy
+        new = _copy(dataset)
+        new.dataset = inner.filter(predicate)
+        return new
+    indices = [i for i in range(len(inner)) if predicate(inner[i])]
+    from copy import copy as _copy
+    new = _copy(dataset)
+    new.dataset = inner.select(indices)
+    return new
 
 
 @dataclass
@@ -56,7 +102,14 @@ class NeuralOutputs:
     base_alpha_argmax: torch.Tensor
     cf_alpha_probs: Dict[SiteKey, torch.Tensor]
     cf_alpha_argmax: Dict[SiteKey, torch.Tensor]
-    letters: str
+    alphabet: LabelAlphabet
+
+    @property
+    def letters(self) -> str:
+        """Legacy accessor: only meaningful if the alphabet is a single-char one."""
+        if all(len(lab) == 1 for lab in self.alphabet.labels):
+            return "".join(self.alphabet.labels)
+        return ""
 
 
 def aggregate_mean(rows: Sequence[torch.Tensor]) -> torch.Tensor:
@@ -73,12 +126,16 @@ def normalize_rows(M: torch.Tensor, eps: float = 1e-30) -> torch.Tensor:
 
 
 def _causal_letter_pairs(causal_model, dataset, *, variable: str) -> Tuple[List[str], List[str]]:
-    """Per-example (base_letter, source_letter) under interchange of ``variable``.
+    """Per-example (base_label, source_label) under interchange of ``variable``.
 
     Skips examples where the interchange leaves a downstream variable
     undefined (e.g. ``choice_i`` swap that removes the question's color from
     the choice list, leaving pointer = None). This loses some examples per
     row but is the only safe option without filtering the dataset upstream.
+
+    Despite the legacy "letter" naming, the returned strings are stripped
+    versions of ``causal_model.run_*()["answer"]`` — for MCQA/ARC these are
+    single letters; for RAVEL these are word strings like "France".
     """
     base_letters: List[str] = []
     source_letters: List[str] = []
@@ -111,31 +168,63 @@ def build_abstract_effect_row(
     dataset,
     *,
     variable: str,
-    letters: str,
+    alphabet: Optional[LabelAlphabet] = None,
+    letters: Optional[str] = None,
     normalize: bool = True,
+    dataset_filter: Optional[Callable[[dict], bool]] = None,
+    on_unknown_label: str = "raise",  # "raise" | "skip"
 ) -> torch.Tensor:
     """One-row abstract-effect signature for a single OT variable.
 
-    For each example: compute ``one_hot(source_letter) - one_hot(base_letter)``
-    over ``letters``, then average. Optionally L2-normalise the result.
-    Output shape: ``(len(letters),)``.
+    For each example: compute ``one_hot(source_label) - one_hot(base_label)``
+    over the alphabet, then average. Optionally L2-normalise the result.
+    Output shape: ``(alphabet.num_dims,)``.
+
+    Parameters
+    ----------
+    alphabet, letters :
+        Use either. ``letters`` is the legacy MCQA/ARC convenience.
+    dataset_filter :
+        If provided, examples are filtered before computing the row. Used
+        for per-row dataset slicing (e.g. RAVEL: row ``Country`` only sees
+        bases where ``queried_attribute == "Country"``).
+    on_unknown_label :
+        ``"raise"`` is the strict legacy behaviour. ``"skip"`` drops examples
+        whose answer string isn't in the alphabet (useful when the alphabet
+        was built from the causal model's declared answer set but real LM
+        outputs include rare unseen variants).
     """
+    alpha = _resolve_alphabet(alphabet, letters)
+    ds = dataset if dataset_filter is None else _filter_dataset(dataset, dataset_filter)
     base_letters, source_letters = _causal_letter_pairs(
-        causal_model, dataset, variable=variable
+        causal_model, ds, variable=variable
     )
-    K = len(letters)
-    letter_to_idx = {ch: i for i, ch in enumerate(letters)}
+    K = alpha.num_dims
     rows: List[torch.Tensor] = []
+    n_unknown = 0
     for b, s in zip(base_letters, source_letters):
-        if b not in letter_to_idx or s not in letter_to_idx:
-            raise ValueError(
-                f"Letter {b!r} or {s!r} not in alphabet {letters!r}; "
-                "widen `letters` to cover all observed answers."
-            )
+        b_idx = alpha.label_to_dim.get(b)
+        s_idx = alpha.label_to_dim.get(s)
+        if b_idx is None or s_idx is None:
+            if on_unknown_label == "raise":
+                raise ValueError(
+                    f"Label {b!r} or {s!r} not in alphabet ({K} dims); "
+                    "widen the alphabet or pass on_unknown_label='skip'."
+                )
+            n_unknown += 1
+            continue
         row = torch.zeros(K, dtype=torch.float32)
-        row[letter_to_idx[s]] += 1.0
-        row[letter_to_idx[b]] -= 1.0
+        row[s_idx] += 1.0
+        row[b_idx] -= 1.0
         rows.append(row)
+    if n_unknown:
+        print(f"[features] build_abstract_effect_row(variable={variable!r}): "
+              f"skipped {n_unknown} examples with labels outside the alphabet")
+    if not rows:
+        # Fallback: return a zero row rather than raising. The caller will
+        # see an L2-normless row and can decide whether to drop it.
+        zero = torch.zeros(K, dtype=torch.float32)
+        return zero
     aggregated = aggregate_mean(rows)
     if normalize:
         aggregated = normalize_rows(aggregated.unsqueeze(0)).squeeze(0)
@@ -147,27 +236,44 @@ def build_abstract_table(
     dataset,
     *,
     variables: Sequence[str],
-    letters: str,
+    alphabet: Optional[LabelAlphabet] = None,
+    letters: Optional[str] = None,
     normalize: bool = True,
+    per_row_dataset_filter: Optional[Sequence[Optional[Callable[[dict], bool]]]] = None,
+    on_unknown_label: str = "raise",
 ) -> torch.Tensor:
-    """Stack one abstract row per variable. Shape ``(V, len(letters))``."""
-    return torch.stack(
-        [
-            build_abstract_effect_row(
-                causal_model, dataset,
-                variable=v, letters=letters, normalize=normalize,
-            )
-            for v in variables
-        ],
-        dim=0,
-    )
+    """Stack one abstract row per variable. Shape ``(V, alphabet.num_dims)``.
+
+    ``per_row_dataset_filter`` (if given) is a sequence of per-row predicates
+    aligned with ``variables`` — each row's signature is computed on the
+    examples passing its predicate. Use ``None`` for a row to disable
+    filtering on that row only.
+    """
+    if per_row_dataset_filter is not None and len(per_row_dataset_filter) != len(variables):
+        raise ValueError(
+            f"per_row_dataset_filter length {len(per_row_dataset_filter)} "
+            f"!= len(variables) {len(variables)}"
+        )
+    rows = []
+    for i, v in enumerate(variables):
+        ds_filter = per_row_dataset_filter[i] if per_row_dataset_filter is not None else None
+        rows.append(build_abstract_effect_row(
+            causal_model, dataset,
+            variable=v,
+            alphabet=alphabet, letters=letters,
+            normalize=normalize,
+            dataset_filter=ds_filter,
+            on_unknown_label=on_unknown_label,
+        ))
+    return torch.stack(rows, dim=0)
 
 
 def collect_neural_outputs(
     bundle: ExperimentBundle,
     dataset,
     *,
-    letters: str,
+    alphabet: Optional[LabelAlphabet] = None,
+    letters: Optional[str] = None,
     batch_size: int = 32,
     verbose: bool = False,
 ) -> NeuralOutputs:
@@ -180,7 +286,10 @@ def collect_neural_outputs(
     add_mib_to_syspath()
     from experiments.pyvene_core import _run_interchange_interventions  # type: ignore[import-not-found]
 
-    tok_ids = alphabet_token_ids(bundle.pipeline.tokenizer, letters=letters)
+    alpha = _resolve_alphabet(alphabet, letters)
+    if not alpha.has_tokens:
+        alpha = resolve_tokens(alpha, bundle.pipeline.tokenizer)
+    tok_ids = alpha.token_ids_tensor()
 
     base_chunks: List[torch.Tensor] = []
     n = len(dataset.dataset)
@@ -215,7 +324,7 @@ def collect_neural_outputs(
         base_alpha_argmax=base_argmax,
         cf_alpha_probs=cf_probs_by_site,
         cf_alpha_argmax=cf_argmax_by_site,
-        letters=letters,
+        alphabet=alpha,
     )
 
 
@@ -242,14 +351,17 @@ def collect_neural_effect_signatures(
     bundle: ExperimentBundle,
     dataset,
     *,
-    letters: str,
+    alphabet: Optional[LabelAlphabet] = None,
+    letters: Optional[str] = None,
     normalize: bool = True,
     batch_size: int = 32,
     verbose: bool = False,
 ) -> Dict[SiteKey, torch.Tensor]:
     """Backwards-compatible wrapper: returns just the (K,) per-site rows."""
     outputs = collect_neural_outputs(
-        bundle, dataset, letters=letters, batch_size=batch_size, verbose=verbose,
+        bundle, dataset,
+        alphabet=alphabet, letters=letters,
+        batch_size=batch_size, verbose=verbose,
     )
     return signatures_from_outputs(outputs, normalize=normalize)
 
@@ -271,25 +383,39 @@ def expected_cf_letter_indices(
     dataset,
     *,
     variable: str,
-    letters: str,
+    alphabet: Optional[LabelAlphabet] = None,
+    letters: Optional[str] = None,
+    on_unknown_label: str = "raise",  # "raise" | "skip"
 ) -> torch.Tensor:
-    """Per-example expected counterfactual letter index after interchanging
+    """Per-example expected counterfactual label index after interchanging
     ``variable`` from the source. This is the IIA target.
+
+    With ``on_unknown_label="skip"``, examples whose CF answer is outside the
+    alphabet are mapped to ``-1`` so callers can mask them out of IIA scoring.
     """
-    letter_to_idx = {ch: i for i, ch in enumerate(letters)}
+    alpha = _resolve_alphabet(alphabet, letters)
     indices: List[int] = []
+    n_unknown = 0
     for i, example in enumerate(_iter_examples(dataset)):
         cf_setting = causal_model.run_interchange(
             example["input"],
             {variable: example["counterfactual_inputs"][0]},
         )
         letter = str(cf_setting["answer"]).strip()
-        if letter not in letter_to_idx:
-            raise ValueError(
-                f"Counterfactual letter {letter!r} at example {i} not in alphabet "
-                f"{letters!r}; widen `letters`."
-            )
-        indices.append(letter_to_idx[letter])
+        idx = alpha.label_to_dim.get(letter)
+        if idx is None:
+            if on_unknown_label == "raise":
+                raise ValueError(
+                    f"Counterfactual label {letter!r} at example {i} not in "
+                    f"alphabet ({alpha.num_dims} dims); widen the alphabet."
+                )
+            n_unknown += 1
+            indices.append(-1)
+            continue
+        indices.append(idx)
+    if n_unknown:
+        print(f"[features] expected_cf_letter_indices(variable={variable!r}): "
+              f"{n_unknown} examples had CF labels outside the alphabet (idx=-1)")
     return torch.tensor(indices, dtype=torch.long)
 
 
@@ -300,11 +426,17 @@ def per_site_iia(
     """Interchange-intervention accuracy per site over the alphabet.
 
     IIA[s] = mean_j ( argmax_alphabet(cf_logits[s, j]) == expected_cf[j] ).
-    Defined on the alphabet (not the full vocab) to match the source PLOT,
-    which scored against the task's discrete output set.
+    Examples with ``expected_cf[j] == -1`` are treated as masked-out (their
+    CF label was outside the alphabet) and excluded from the mean.
     """
     out: Dict[SiteKey, float] = {}
     target = expected_cf_indices.to(torch.long)
+    mask = target >= 0
+    n_valid = int(mask.sum().item())
     for key, argmax in outputs.cf_alpha_argmax.items():
-        out[key] = float((argmax.to(torch.long) == target).to(torch.float32).mean().item())
+        if n_valid == 0:
+            out[key] = 0.0
+            continue
+        correct = (argmax.to(torch.long) == target) & mask
+        out[key] = float(correct.to(torch.float32).sum().item() / n_valid)
     return out

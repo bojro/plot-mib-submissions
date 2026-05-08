@@ -21,12 +21,19 @@ invariant banks.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 import torch
 
 from ..pipeline import ExperimentBundle
 from ..site_keys import site_key_for_unit
+from ._alphabets import (
+    LabelAlphabet,
+    from_causal_model_answers,
+    from_labels,
+    from_letters,
+    resolve_tokens,
+)
 from .features import (
     NeuralOutputs,
     aggregate_mean,
@@ -53,10 +60,30 @@ SiteKey = Tuple[int, str]
 @dataclass(frozen=True)
 class PlotConfig:
     """Hyperparameters mirroring ``run_progressive_plot.py``'s defaults
-    where applicable, with answer-letter alphabet adapted to MCQA."""
+    where applicable, with answer-label alphabet adapted to the cell's task.
+
+    Alphabet:
+        - Set ``letters`` to a single string for char-based alphabets (MCQA, ARC).
+        - Set ``answer_strings`` to a tuple of multi-char labels for
+          word-token alphabets (RAVEL). Only one of the two should be set.
+        - Or set ``answer_alphabet_from_causal_model=True`` to derive
+          ``answer_strings`` at runtime from ``causal_model.values["answer"]``.
+
+    Per-row dataset filter:
+        - Set ``per_row_filter_attribute`` to an input-dict key (e.g.
+          ``"queried_attribute"`` for RAVEL) — each OT row will only see
+          examples where ``input[per_row_filter_attribute] == row_variable``.
+          Use when only a subset of bases is causally connected to each row's
+          variable. Disabled by default.
+    """
 
     variables: Tuple[str, ...] = ("answer_pointer", "answer")
     letters: str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    answer_strings: Optional[Tuple[str, ...]] = None
+    answer_alphabet_from_causal_model: bool = False
+    per_row_filter_attribute: Optional[str] = None
+    on_unknown_label: str = "raise"     # "raise" | "skip"
+
     cost_metric: str = "sq_l2"          # "sq_l2" | "l1" | "cosine"
     normalize_signatures: bool = True
     # Source PLOT (run_progressive_plot.py:_run_ot_stage) uses balanced
@@ -186,6 +213,76 @@ def _calibration_variable(config: PlotConfig) -> str:
     return config.variables[config.target_row_index]
 
 
+def _resolve_config_alphabet(config: PlotConfig, bundle: ExperimentBundle) -> LabelAlphabet:
+    """Build a ``LabelAlphabet`` from the PlotConfig + bundle's tokenizer.
+
+    Prefers ``answer_strings`` if set, else ``answer_alphabet_from_causal_model``,
+    else falls back to ``letters``.
+
+    Token IDs are resolved eagerly when a real tokenizer is available so that
+    abstract and neural signatures use the *same* dim count — collision
+    compaction during ``resolve_tokens`` may shrink the alphabet (e.g. RAVEL:
+    928 labels → 271 dims). If the alphabet is built but resolution doesn't
+    happen here (because the bundle has no tokenizer, e.g. unit tests with
+    stubbed-out LM forwards), abstract and neural would disagree on K.
+    """
+    if config.answer_strings is not None and config.answer_alphabet_from_causal_model:
+        raise ValueError(
+            "PlotConfig: set either answer_strings or answer_alphabet_from_causal_model, not both"
+        )
+    if config.answer_strings is not None:
+        alpha = from_labels(config.answer_strings)
+    elif config.answer_alphabet_from_causal_model:
+        alpha = from_causal_model_answers(bundle.causal_model)
+    else:
+        alpha = from_letters(config.letters)
+
+    # Resolve eagerly when bundle exposes a real tokenizer. Stubs may set
+    # bundle.pipeline = None or omit it; in that case stay lazy and let
+    # collect_neural_outputs (which the stub replaces) handle resolution.
+    pipeline = getattr(bundle, "pipeline", None)
+    tokenizer = getattr(pipeline, "tokenizer", None) if pipeline is not None else None
+    if tokenizer is not None:
+        alpha = resolve_tokens(alpha, tokenizer)
+    return alpha
+
+
+def _make_attribute_filter(attr_key: str, attr_value: str):
+    """Predicate ``ex["input"][attr_key] == attr_value`` (handles dict input)."""
+    def _pred(example):
+        inp = example.get("input", example)
+        if isinstance(inp, dict):
+            return inp.get(attr_key) == attr_value
+        return False
+    return _pred
+
+
+def _per_row_cost(
+    abstract_table: torch.Tensor,
+    layer_tables_per_row: List[torch.Tensor],
+    *,
+    metric: str,
+) -> torch.Tensor:
+    """Per-row cost matrix for Stage A / Stage B with potentially-distinct
+    neural reference tables per OT row.
+
+    ``abstract_table`` is ``(V, K)``. ``layer_tables_per_row`` is a list of V
+    tensors each of shape ``(M, K)`` (M = num layers for Stage A, num token
+    positions for Stage B). Returns ``(V, M)`` where row v is the v-th row
+    of ``cost_matrix(abstract_table[v:v+1], layer_tables_per_row[v])``.
+    """
+    V = abstract_table.size(0)
+    if len(layer_tables_per_row) != V:
+        raise ValueError(
+            f"layer_tables_per_row has {len(layer_tables_per_row)} entries; expected {V}"
+        )
+    rows = [
+        cost_matrix(abstract_table[v : v + 1], layer_tables_per_row[v], metric=metric)[0]
+        for v in range(V)
+    ]
+    return torch.stack(rows, dim=0)
+
+
 def select_sites_via_plot(
     bundle: ExperimentBundle,
     fit_dataset,
@@ -203,42 +300,113 @@ def select_sites_via_plot(
     ``lambda`` dimension from the source has no clean MIB analog and is
     omitted.
     """
+    alphabet = _resolve_config_alphabet(config, bundle)
+    V = len(config.variables)
+
+    # ---- Decide per-row datasets (per_row_filter_attribute path) --------
+    use_per_row_filter = config.per_row_filter_attribute is not None
+    if use_per_row_filter:
+        per_row_filters = [
+            _make_attribute_filter(config.per_row_filter_attribute, v)
+            for v in config.variables
+        ]
+        # Materialize per-row datasets via the same filter helper used in
+        # features.py (handles HF datasets and plain iterables).
+        from .features import _filter_dataset as _filter_ds  # noqa: E402
+        per_row_datasets = [_filter_ds(fit_dataset, p) for p in per_row_filters]
+    else:
+        per_row_filters = None
+        per_row_datasets = [fit_dataset] * V
+
     abstract_table = build_abstract_table(
         bundle.causal_model, fit_dataset,
         variables=config.variables,
-        letters=config.letters,
+        alphabet=alphabet,
         normalize=config.normalize_signatures,
+        per_row_dataset_filter=per_row_filters,
+        on_unknown_label=config.on_unknown_label,
     )                                                          # (V, K)
 
-    outputs = collect_neural_outputs(
-        bundle, fit_dataset, letters=config.letters, verbose=verbose,
-    )
-    site_signatures = signatures_from_outputs(
-        outputs, normalize=config.normalize_signatures,
-    )
+    # ---- Neural collection: per-row when filter set, else single shared ---
+    per_row_outputs: List[NeuralOutputs] = []
+    per_row_sigs: List[Dict[SiteKey, torch.Tensor]] = []
+    per_row_layer_tables: List[torch.Tensor] = []
+    layer_ids: List[int] = []
+    if use_per_row_filter:
+        for v_idx, ds_v in enumerate(per_row_datasets):
+            outputs_v = collect_neural_outputs(
+                bundle, ds_v, alphabet=alphabet, verbose=verbose,
+            )
+            sigs_v = signatures_from_outputs(
+                outputs_v, normalize=config.normalize_signatures,
+            )
+            layer_tab_v, layer_ids_v = _aggregate_to_layer_table(
+                sigs_v, normalize=config.normalize_signatures,
+            )
+            per_row_outputs.append(outputs_v)
+            per_row_sigs.append(sigs_v)
+            per_row_layer_tables.append(layer_tab_v)
+            if not layer_ids:
+                layer_ids = layer_ids_v
+            elif layer_ids != layer_ids_v:
+                raise RuntimeError(
+                    "Per-row datasets produced different layer-id sets — "
+                    "all rows must see the same model_units_lists."
+                )
+    else:
+        outputs = collect_neural_outputs(
+            bundle, fit_dataset, alphabet=alphabet, verbose=verbose,
+        )
+        sigs = signatures_from_outputs(outputs, normalize=config.normalize_signatures)
+        layer_table, layer_ids = _aggregate_to_layer_table(
+            sigs, normalize=config.normalize_signatures,
+        )
+        per_row_outputs = [outputs] * V
+        per_row_sigs = [sigs] * V
+        per_row_layer_tables = [layer_table] * V
 
+    # ---- IIA scoring data: based on calibration variable ---------------
     calib_var = _calibration_variable(config)
+    if use_per_row_filter:
+        # Use the per-row outputs aligned with the calibration variable.
+        if calib_var in config.variables:
+            calib_idx = list(config.variables).index(calib_var)
+            iia_outputs = per_row_outputs[calib_idx]
+            iia_dataset = per_row_datasets[calib_idx]
+        else:
+            # Calibration variable is outside the OT row schema — collect on
+            # its own filtered dataset.
+            calib_filter = _make_attribute_filter(
+                config.per_row_filter_attribute, calib_var,
+            )
+            from .features import _filter_dataset as _filter_ds  # noqa: E402
+            iia_dataset = _filter_ds(fit_dataset, calib_filter)
+            iia_outputs = collect_neural_outputs(
+                bundle, iia_dataset, alphabet=alphabet, verbose=verbose,
+            )
+    else:
+        iia_outputs = per_row_outputs[0]
+        iia_dataset = fit_dataset
     expected_cf = expected_cf_letter_indices(
-        bundle.causal_model, fit_dataset,
-        variable=calib_var, letters=config.letters,
+        bundle.causal_model, iia_dataset,
+        variable=calib_var, alphabet=alphabet,
+        on_unknown_label=config.on_unknown_label,
     )
-    iia_by_site = per_site_iia(outputs, expected_cf)
+    iia_by_site = per_site_iia(iia_outputs, expected_cf)
 
     # ---- Stage A: per-row top-k layer picks (faithful to source) --------
     # The source's `_stage_a_timesteps` returns one timestep per OT row.
     # Each row's mass row in π is interpreted independently. We sweep
     # epsilon, evaluate the resulting per-row layer picks by mean IIA at
     # the union of layers, and keep the best epsilon.
-    layer_table, layer_ids = _aggregate_to_layer_table(
-        site_signatures, normalize=config.normalize_signatures,
+    stage_a_cost = _per_row_cost(
+        abstract_table, per_row_layer_tables, metric=config.cost_metric,
     )
-    stage_a_cost = cost_matrix(abstract_table, layer_table, metric=config.cost_metric)
 
     a_eps_grid = _grid_or_default(config.stage_a_epsilon_grid, config.stage_a_epsilon)
     a_topk_grid = _grid_or_default(config.stage_a_top_k_grid, config.stage_a_top_k_per_row)
     stage_a_trials: List[Dict] = []
     best_a = None  # (score, eps, top_k_per_row, pi, picks_per_row, union_layers)
-    V = abstract_table.size(0)
     for eps in a_eps_grid:
         pi = _solve(
             stage_a_cost,
@@ -294,10 +462,27 @@ def select_sites_via_plot(
 
     for layer in stage_a_layer_picks:
         rows_owning = layer_to_rows[int(layer)]
-        token_table, token_ids = _layer_token_table(site_signatures, layer)
-        if config.normalize_signatures:
-            token_table = normalize_rows(token_table)
-        b_cost = cost_matrix(abstract_table, token_table, metric=config.cost_metric)
+        # Build per-row token tables at this layer. When per_row_filter isn't
+        # in use, all per_row_sigs are the same dict, so all per-row token
+        # tables are identical — the per-row cost reduces to the legacy
+        # ``cost_matrix(abstract, token_table)``.
+        token_tables_per_row: List[torch.Tensor] = []
+        token_ids: List[str] = []
+        for r in range(V):
+            tab_r, tok_ids_r = _layer_token_table(per_row_sigs[r], layer)
+            if config.normalize_signatures:
+                tab_r = normalize_rows(tab_r)
+            token_tables_per_row.append(tab_r)
+            if not token_ids:
+                token_ids = tok_ids_r
+            elif token_ids != tok_ids_r:
+                raise RuntimeError(
+                    f"Layer {layer}: per-row token-id sets differ — "
+                    "all rows' filtered datasets must declare the same model_units."
+                )
+        b_cost = _per_row_cost(
+            abstract_table, token_tables_per_row, metric=config.cost_metric,
+        )
 
         best_per_layer = None  # (score, eps, top_k, pi, picks)
         for eps in b_eps_grid:
@@ -361,7 +546,7 @@ def select_sites_via_plot(
         stage_a_pi=stage_a_pi,
         stage_b_pi_per_layer=stage_b_pi_per_layer,
         abstract_table=abstract_table,
-        neural_table_layer=layer_table,
+        neural_table_layer=per_row_layer_tables[0],
         config=config,
         stage_a_chosen=(stage_a_eps, stage_a_top_k, stage_a_score),
         stage_b_chosen=best_b_global,

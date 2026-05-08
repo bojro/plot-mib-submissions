@@ -1,0 +1,343 @@
+{
+  "method_name": "submission",
+  "model_name": "Gemma2ForCausalLM",
+  "task_name": "4_answer_MCQA",
+  "dataset": {
+    "answerPosition_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.96
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol_period"
+          },
+          "answer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.96
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol_period"
+          },
+          "answer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.96
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol_period"
+          },
+          "answer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol_period"
+          },
+          "answer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 1.0
+          }
+        }
+      }
+    },
+    "randomLetter_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.8571428571428571
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol_period"
+          },
+          "answer": {
+            "average_score": 0.02857142857142857
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.02857142857142857
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.8571428571428571
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol_period"
+          },
+          "answer": {
+            "average_score": 0.02857142857142857
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.02857142857142857
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.8857142857142857
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol_period"
+          },
+          "answer": {
+            "average_score": 0.02857142857142857
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.02857142857142857
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.02857142857142857
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol_period"
+          },
+          "answer": {
+            "average_score": 0.02857142857142857
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.8571428571428571
+          }
+        }
+      }
+    },
+    "answerPosition_randomLetter_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.7567567567567568
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol_period"
+          },
+          "answer": {
+            "average_score": 0.08108108108108109
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.08108108108108109
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.7567567567567568
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol_period"
+          },
+          "answer": {
+            "average_score": 0.08108108108108109
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.08108108108108109
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.8378378378378378
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol_period"
+          },
+          "answer": {
+            "average_score": 0.08108108108108109
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.08108108108108109
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol"
+          },
+          "answer": {
+            "average_score": 0.08108108108108109
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol_period"
+          },
+          "answer": {
+            "average_score": 0.08108108108108109
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "last_token"
+          },
+          "answer": {
+            "average_score": 0.6486486486486487
+          }
+        }
+      }
+    }
+  }
+}

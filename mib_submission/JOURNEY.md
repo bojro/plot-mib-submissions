@@ -125,11 +125,27 @@ If the goal is moving to other MIB cells:
 
 ## Files of record
 
-- `mib_submission/plot/run.py` — driver, currently set to V=4 PLOT.
+- `mib_submission/plot/run.py` — CLI driver (argparse: `--task --model --variable` + overrides).
+- `mib_submission/plot/configs.py` — per-task `PlotConfig` presets.
 - `mib_submission/plot/pipeline.py` — `select_sites_via_plot` (Stage A + B with calibration sweep).
-- `mib_submission/plot/features.py` — output-prob-delta signatures, IIA.
+- `mib_submission/plot/features.py` — signatures + abstract table; per-row dataset filter; alphabet support.
+- `mib_submission/plot/_alphabets.py` — `LabelAlphabet` (letters / multi-string / causal-model).
 - `mib_submission/plot/transport.py` — Sinkhorn solvers (verbatim port).
 - `mib_submission/plot/diagnose_costs.py` — granular cost-matrix dump.
 - `mib_submission/plot/bucketed.py` — bucketed variant (parked, not used).
-- `mib_submission/results/EVAL_LOG.md` — per-run results table.
-- `mib_submission/results/v8_mixed_results.json`, `offplot_L15_L20.json` — archived eval JSONs.
+- `mib_submission/results/RESULTS.md` — auto-generated per-cell IIA table.
+- `mib_submission/results/JOURNAL.md` — methodological narrative across sessions.
+- `mib_submission/results/v8_mixed_results.json`, `offplot_L15_L20.json` — archived eval JSONs from cell-1 disambiguation.
+
+---
+
+## Postscript (2026-05-08)
+
+This document is the cell-1 port story. Subsequent cells (3, 4, 7, 8, 22)
+shipped in later sessions; their narrative lives in
+`mib_submission/results/JOURNAL.md`. The pipeline structure described
+above carried through unchanged for MCQA × Gemma (cells 3, 4) and ARC ×
+Gemma (cells 7, 8). RAVEL needed a non-trivial extension — token-set
+alphabets, per-row dataset filtering, multi-token labels, custom checker
+— landed in the cell-22 work. See `JOURNAL.md` for the RAVEL design
+rationale and `CLAUDE.md` for the current overall plan.
