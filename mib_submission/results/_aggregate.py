@@ -427,7 +427,7 @@ def emit_results_md(results: List[CellResult]) -> str:
         "per the eval's scoring rules (it scores every position at picked "
         "layers, defaulting to identity at unselected positions) but is not "
         "a direct PLOT-rotation result. See "
-        "`mib_submission/PLOT_SHORTCOMINGS.md` §15 for the full mechanism.\n"
+        "`../../PLOT_SHORTCOMINGS.md` §15 for the full mechanism.\n"
     )
 
     # Compare-to-baseline rows where we have leaderboard DAS numbers.

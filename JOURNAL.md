@@ -668,7 +668,7 @@ not each row independently) — would prevent loud rows from drowning
 quiet ones.
 
 Hypothesis catalog and discrimination experiments enumerated in
-[`HYPOTHESES.md`](../../HYPOTHESES.md). Priority experiments next
+[`HYPOTHESES.md`](HYPOTHESES.md). Priority experiments next
 session:
 - **E-R-1** (post-hoc, no GPU): single-token RAVEL eval split. Cheapest
   test of whether Country's gap is primarily multi-token loss.
@@ -713,7 +713,7 @@ gaps that aren't seed-variance, ran a session of diagnostic + candidate-
 fix experiments targeted at the failure modes. Net result: one strong
 positive finding, three falsified candidate fixes, code reverted. Full
 hypothesis catalog with experimental status in
-[`HYPOTHESES.md`](../../HYPOTHESES.md).
+[`HYPOTHESES.md`](HYPOTHESES.md).
 
 ### Setup
 

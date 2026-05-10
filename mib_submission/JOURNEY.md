@@ -134,7 +134,7 @@ If the goal is moving to other MIB cells:
 - `mib_submission/plot/diagnose_costs.py` — granular cost-matrix dump.
 - `mib_submission/plot/bucketed.py` — bucketed variant (parked, not used).
 - `mib_submission/results/RESULTS.md` — auto-generated per-cell IIA table.
-- `mib_submission/results/JOURNAL.md` — methodological narrative across sessions.
+- `JOURNAL.md` — methodological narrative across sessions.
 - `mib_submission/results/v8_mixed_results.json`, `offplot_L15_L20.json` — archived eval JSONs from cell-1 disambiguation.
 
 ---
@@ -143,7 +143,7 @@ If the goal is moving to other MIB cells:
 
 This document is the cell-1 port story. Subsequent cells (3, 4, 7, 8, 22)
 shipped in later sessions; their narrative lives in
-`mib_submission/results/JOURNAL.md`. The pipeline structure described
+`JOURNAL.md`. The pipeline structure described
 above carried through unchanged for MCQA × Gemma (cells 3, 4) and ARC ×
 Gemma (cells 7, 8). RAVEL needed a non-trivial extension — token-set
 alphabets, per-row dataset filtering, multi-token labels, custom checker

@@ -9,7 +9,7 @@ After 2026-05-09 overnight + diagnostic session, we have 12/26 cells shipped and
 | 21 | RAVEL × Country | 0.615 | 0.957 | -0.342 |
 | 23 | RAVEL × Language | 0.629 | 0.812 | -0.183 |
 
-(Cell 2 MCQA Qwen answer is also structural — documented in `mib_submission/PLOT_SHORTCOMINGS.md` §2.)
+(Cell 2 MCQA Qwen answer is also structural — documented in `PLOT_SHORTCOMINGS.md` §2.)
 
 This doc records the hypotheses we tested, the experimental results, and the refined hypotheses that survived. The candidate-fix CLI flags added during testing have been reverted; the experimental scripts are deleted. This is now a results record, not a runnable plan.
 
@@ -157,4 +157,4 @@ Two refined hypotheses for follow-up work, both more expensive to test than this
 1. **H-RAVEL-NEW-1** (Country/Language ⇒ asymptote near baseline at top_k≈30): ~3-4 hr GPU each
 2. **H-IOI-NEW-1** (replace logit-diff signature with ablation-cascade signature): ~1 day code + re-run
 
-Cell 2 (MCQA Qwen answer) was not investigated this session; its hypothesis is in `mib_submission/PLOT_SHORTCOMINGS.md` §2.
+Cell 2 (MCQA Qwen answer) was not investigated this session; its hypothesis is in `PLOT_SHORTCOMINGS.md` §2.

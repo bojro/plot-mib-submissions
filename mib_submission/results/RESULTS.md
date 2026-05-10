@@ -37,7 +37,7 @@ Per-cell IIA on the public MIB test splits, with picked sites and site-level bre
 † Picked sites for this cell were inferred from the eval JSON's per-site IIA pattern (no submission folder present locally). The count is the number of (layer, token-position) units whose IIA exceeded an identity-baseline threshold on at least one split.
 
 
-‡ **Cell 8 ARC × Gemma × answer (0.999)** is driven by the harness's automatic identity-fallback at L25 last_token — a position PLOT did not pick to train. PLOT's actually-trained DAS rotations scored 0.04–0.79 at this cell. The win is methodologically valid per the eval's scoring rules (it scores every position at picked layers, defaulting to identity at unselected positions) but is not a direct PLOT-rotation result. See `mib_submission/PLOT_SHORTCOMINGS.md` §15 for the full mechanism.
+‡ **Cell 8 ARC × Gemma × answer (0.999)** is driven by the harness's automatic identity-fallback at L25 last_token — a position PLOT did not pick to train. PLOT's actually-trained DAS rotations scored 0.04–0.79 at this cell. The win is methodologically valid per the eval's scoring rules (it scores every position at picked layers, defaulting to identity at unselected positions) but is not a direct PLOT-rotation result. See `../../PLOT_SHORTCOMINGS.md` §15 for the full mechanism.
 
 ### Comparison to baseline DAS (leaderboard)
 

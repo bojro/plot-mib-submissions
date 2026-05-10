@@ -9,9 +9,9 @@ Standalone repo for PLOT (**Progressive Localization via Optimal Transport**) su
 What our pipeline implements is what the source paper calls **PLOT-DAS** (Stage A + Stage B + DAS restricted to picked sites). The source paper also defines `PLOT` (localization-only), `PLOT-native` / `PLOT-PCA` (Stage B handles in native coordinates or PCA basis), and `Full DAS` (all sites). Source repo: <https://github.com/jchang153/causal-abstractions-ot> — main-paper experiments organized under `experiments/heq/`, `experiments/binary_addition/`, and `experiments/mcqa/`.
 
 - Method narrative + cell-1 port story: `mib_submission/JOURNEY.md`.
-- Structural limits of the method: `mib_submission/PLOT_SHORTCOMINGS.md`.
+- Structural limits of the method: `PLOT_SHORTCOMINGS.md`.
 - Per-cell IIA results (auto-generated): `mib_submission/results/RESULTS.md`.
-- Methodological narrative + per-session decisions: `mib_submission/results/JOURNAL.md`.
+- Methodological narrative + per-session decisions: `JOURNAL.md`.
 - 26-cell status tracker: `mib_submission/results/CELLS.md`.
 
 Source-of-truth PLOT (binary-addition GRU origin) is preserved offline at `reference/source_plot/`.
@@ -100,10 +100,8 @@ mib_submission/
 │   ├── _aggregate.py           # NEW. Single source of truth for RESULTS.md.
 │   ├── RESULTS.md              # AUTO-GENERATED. Don't edit by hand.
 │   ├── CELLS.md                # Status tracker (status only, no IIA numbers).
-│   ├── JOURNAL.md              # Methodological narrative (append-only).
 │   └── *.json                  # Archived eval outputs, one per cell.
 ├── JOURNEY.md                  # Cell-1 port story (historical).
-├── PLOT_SHORTCOMINGS.md        # Method limits + per-cell expectations.
 └── ENV.md                      # Pinned commits, package versions.
 
 tests/
