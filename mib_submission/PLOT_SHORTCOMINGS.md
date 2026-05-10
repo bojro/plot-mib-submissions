@@ -4,6 +4,8 @@ Notes on the structural limits of PLOT (**Progressive Localization via Optimal T
 
 This repo specifically implements **PLOT-DAS** — Stage A (layer OT) + Stage B (per-layer position OT) + DAS rotation training at picked sites. The source paper also defines `PLOT` (localization only), `PLOT-native` / `PLOT-PCA` (Stage B native or PCA-basis handles), and `Full DAS`. Several of the limits below are PLOT-DAS-specific; some apply to all PLOT variants.
 
+Important context for source-paper readers: of the 12 cells we ship, **only MCQA (cells 1–4) and arithmetic (cell 11) correspond to benchmarks the paper covers** (and even those are re-implementations against MIB's data, not ports of `experiments/mcqa/` or `experiments/two_digit_addition/`). The other 6 cells — ARC (7, 8), RAVEL (21, 22, 23), IOI (13, 14) — are **new applications of the PLOT-DAS algorithm to benchmarks the paper doesn't cover**. Limits §13 (IOI), §14 (RAVEL high cardinality), §15 (DAS-vs-identity, observed on ARC) are properties of those new applications, not pre-existing limits documented in the paper. See `README.md` "Relationship to the source paper" for the full delta.
+
 PLOT's core value proposition stands: it trains DAS at a small handful of OT-selected sites instead of all 72, giving roughly an order-of-magnitude reduction in DAS rotation training. None of the shortcomings below invalidate that. They explain where the gap to baseline DAS comes from on harder cells.
 
 ## 1. V=1 collapse when variables are observationally indistinguishable

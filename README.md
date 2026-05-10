@@ -21,6 +21,30 @@ Of the 12 shipped:
 
 The other 14 of 26 cells require ≥16 GB GPU (Qwen/Gemma IOI + 10 Llama cells); deferred to cloud.
 
+## Relationship to the source paper
+
+The PLOT algorithm is from <https://github.com/jchang153/causal-abstractions-ot>. This repo ships the **PLOT-DAS** variant of the paper (Stage A localizes layers, Stage B localizes positions within those layers, DAS rotations are trained at the picked sites). Algorithm-shape-wise we match the paper's binary-addition pipeline `experiments/binary_addition/` (formerly the `codex/binary-addition-two-stage-plot` branch). What is **not** a direct port of paper code:
+
+| benchmark | paper status | what we did |
+|---|---|---|
+| Binary addition | in paper | not in scope here (not a MIB cell) |
+| MCQA (cells 1–4) | in paper | re-implemented PLOT-DAS against MIB's MCQA dataset using the binary-addition framework; **not** a port of `experiments/mcqa/` scripts |
+| Two-digit addition (cell 11) | in paper | re-implemented against MIB's `arithmetic` task; **not** a port of `experiments/two_digit_addition/` |
+| ARC (cells 7, 8) | not in paper | **new** application — V=4 OT rows over `symbol0..3` letter swaps |
+| RAVEL (cells 21, 22, 23) | not in paper | **new** application — V=3 attribute rows + per-row dataset filter + causal-model-derived alphabet |
+| IOI (cells 13, 14) | not in paper | **new** application — attention-head featurizers, `PatchAttentionHeads` joint DAS, IOI-specific linear-params bootstrap |
+
+**Things in this repo that aren't in the source paper:**
+- Per-row dataset filter for RAVEL (each OT row's signature collected only on bases where `queried_attribute == row_variable`)
+- Attention-head dispatch for IOI: 3-tuple site keys `(layer, head, token_pos)`, joint DAS across picked heads, MSE-on-logit-diff loss
+- Eval-driver patches (`scripts/eval_cell.py`): per-task `max_new_tokens` override, `LMPipeline.load` `position_ids` fallback for transformers 5.x, Qwen2 `head_dim` injection — these are MIB-harness-specific
+- `--seed` flag + seed-variance sweep methodology
+- ARC `stage_b_top_k_grid=(1,)` tweak (PLOT_SHORTCOMINGS §8) and the resulting DAS-vs-identity finding (§15)
+
+**Scoring difference:** we report MIB's IIA aggregation (per-split → per-layer max → highest-view across layers). Numbers in `mib_submission/results/RESULTS.md` are directly comparable to MIB's DAS leaderboard but **not directly comparable to paper tables**, which use task-specific metrics.
+
+**Things the paper has that this repo doesn't implement:** `PLOT` (localization-only, no DAS), `PLOT-native` and `PLOT-PCA` (Stage B handles in native or PCA basis), `PLOT-native-DAS` and `PLOT-PCA-DAS` (DAS guided by Stage B support), `Full DAS` (DAS over all sites). We only ship `PLOT-DAS`.
+
 ## Where to look
 
 - **`CLAUDE.md`** — project context, status table, leaderboard comparison, rollout plan. Dense; engineer-oriented.
