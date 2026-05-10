@@ -48,6 +48,9 @@ The PLOT algorithm is from <https://github.com/jchang153/causal-abstractions-ot>
 ## Where to look
 
 - **`CLAUDE.md`** — project context, status table, leaderboard comparison, rollout plan. Dense; engineer-oriented.
+- **`WALKTHROUGHS.md`** — per-task prose walkthroughs of the PLOT-DAS pipeline (MCQA, ARC, arithmetic, RAVEL, IOI). Reads top-to-bottom on GitHub.
+- **`notebooks/residual_walkthrough.ipynb`** — end-to-end Jupyter walkthrough of the residual-stream pipeline on RAVEL × Continent (cell 22), with the Stage A Sinkhorn-plan heatmap.
+- **`notebooks/ioi_walkthrough.ipynb`** — end-to-end Jupyter walkthrough of the IOI attention-head pipeline (cell 14), including the E-I-2 diagnostic that surfaced the PLOT-picks-wrong-heads finding.
 - **`PLOT_SHORTCOMINGS.md`** — 15-section catalog of diagnosed limitations. Read this for a calibrated view of where PLOT works vs doesn't, and *why*.
 - **`mib_submission/results/RESULTS.md`** — auto-generated per-cell IIA tables.
 - **`mib_submission/results/CELLS.md`** — per-cell status tracker.
