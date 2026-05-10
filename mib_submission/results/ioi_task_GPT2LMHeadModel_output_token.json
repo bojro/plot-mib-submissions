@@ -1,0 +1,49 @@
+{
+  "method_name": "submission",
+  "model_name": "GPT2LMHeadModel",
+  "task_name": "ioi",
+  "dataset": {
+    "s1_io_flip_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='AttentionHead(Layer-9,Head-11,Token-all)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-2,Token-all)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-3,Token-all)')]]": {
+          "metadata": {
+            "layer": 9,
+            "head": 11,
+            "position": "all"
+          },
+          "output_token": {
+            "average_score": 2.6817298415932953
+          }
+        }
+      }
+    },
+    "s2_io_flip_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='AttentionHead(Layer-9,Head-11,Token-all)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-2,Token-all)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-3,Token-all)')]]": {
+          "metadata": {
+            "layer": 9,
+            "head": 11,
+            "position": "all"
+          },
+          "output_token": {
+            "average_score": 6.111757081693309
+          }
+        }
+      }
+    },
+    "s1_ioi_flip_s2_ioi_flip_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='AttentionHead(Layer-9,Head-11,Token-all)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-2,Token-all)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-3,Token-all)')]]": {
+          "metadata": {
+            "layer": 9,
+            "head": 11,
+            "position": "all"
+          },
+          "output_token": {
+            "average_score": 6.670446737073118
+          }
+        }
+      }
+    }
+  }
+}

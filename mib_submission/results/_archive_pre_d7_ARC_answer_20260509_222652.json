@@ -20,7 +20,7 @@
             "position": "last_token"
           },
           "answer": {
-            "average_score": 0.9719512195121951
+            "average_score": 0.9707317073170731
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol)')]]": {
@@ -29,7 +29,7 @@
             "position": "correct_symbol"
           },
           "answer": {
-            "average_score": 0.5902439024390244
+            "average_score": 0.6085365853658536
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-last_token)')]]": {
@@ -38,7 +38,7 @@
             "position": "last_token"
           },
           "answer": {
-            "average_score": 0.9963414634146341
+            "average_score": 0.9975609756097561
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol)')]]": {
@@ -47,7 +47,7 @@
             "position": "correct_symbol"
           },
           "answer": {
-            "average_score": 0.16707317073170733
+            "average_score": 0.05609756097560976
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-last_token)')]]": {
@@ -56,7 +56,7 @@
             "position": "last_token"
           },
           "answer": {
-            "average_score": 0.998780487804878
+            "average_score": 0.9963414634146341
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol)')]]": {
@@ -74,7 +74,7 @@
             "position": "last_token"
           },
           "answer": {
-            "average_score": 1.0
+            "average_score": 0.9975609756097561
           }
         }
       }
@@ -96,7 +96,7 @@
             "position": "last_token"
           },
           "answer": {
-            "average_score": 0.3241935483870968
+            "average_score": 0.3258064516129032
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol)')]]": {
@@ -105,7 +105,7 @@
             "position": "correct_symbol"
           },
           "answer": {
-            "average_score": 0.8951612903225806
+            "average_score": 0.8903225806451613
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-last_token)')]]": {
@@ -114,7 +114,7 @@
             "position": "last_token"
           },
           "answer": {
-            "average_score": 0.7274193548387097
+            "average_score": 0.8
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol)')]]": {
@@ -123,7 +123,7 @@
             "position": "correct_symbol"
           },
           "answer": {
-            "average_score": 0.3161290322580645
+            "average_score": 0.3064516129032258
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-last_token)')]]": {
@@ -132,7 +132,7 @@
             "position": "last_token"
           },
           "answer": {
-            "average_score": 0.9741935483870968
+            "average_score": 0.7709677419354839
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol)')]]": {
@@ -150,7 +150,7 @@
             "position": "last_token"
           },
           "answer": {
-            "average_score": 0.9983870967741936
+            "average_score": 0.6709677419354839
           }
         }
       }
@@ -172,7 +172,7 @@
             "position": "last_token"
           },
           "answer": {
-            "average_score": 0.33157894736842103
+            "average_score": 0.3385964912280702
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol)')]]": {
@@ -181,7 +181,7 @@
             "position": "correct_symbol"
           },
           "answer": {
-            "average_score": 0.8842105263157894
+            "average_score": 0.8807017543859649
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-last_token)')]]": {
@@ -190,7 +190,7 @@
             "position": "last_token"
           },
           "answer": {
-            "average_score": 0.7192982456140351
+            "average_score": 0.7491228070175439
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol)')]]": {
@@ -199,7 +199,7 @@
             "position": "correct_symbol"
           },
           "answer": {
-            "average_score": 0.32280701754385965
+            "average_score": 0.30526315789473685
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-last_token)')]]": {
@@ -208,7 +208,7 @@
             "position": "last_token"
           },
           "answer": {
-            "average_score": 0.980701754385965
+            "average_score": 0.7315789473684211
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol)')]]": {
@@ -226,7 +226,7 @@
             "position": "last_token"
           },
           "answer": {
-            "average_score": 0.9982456140350877
+            "average_score": 0.624561403508772
           }
         }
       }

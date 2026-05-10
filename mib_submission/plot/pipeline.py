@@ -82,7 +82,25 @@ class PlotConfig:
     answer_strings: Optional[Tuple[str, ...]] = None
     answer_alphabet_from_causal_model: bool = False
     per_row_filter_attribute: Optional[str] = None
+    # IOI-style per-row dispatch: each OT row uses an entirely DIFFERENT
+    # dataset (specified by train-split key, resolved against
+    # ``bundle.train_data``), with all rows interchanging the same CM
+    # variable (``calibration_variable``). Mutually exclusive with
+    # ``per_row_filter_attribute``. Mirrors source PLOT's per-row
+    # ``fit_records_for_row`` family selection on the binary GRU adder.
+    # When set, ``variables`` are interpreted as labels for reporting
+    # (e.g. "s1_io_flip", "s2_io_flip") not as CM-variable names.
+    per_row_split_datasets: Optional[Tuple[str, ...]] = None
     on_unknown_label: str = "raise"     # "raise" | "skip"
+    # Causal-model output node key. MCQA/ARC/RAVEL use ``"answer"``; arithmetic
+    # exposes its output as ``"raw_output"`` (multi-digit string) — first
+    # character is the alphabet member.
+    output_key: str = "answer"
+    # Map the causal-model output string to an alphabet key. ``None`` ⇒ use
+    # the stripped string as-is (correct for MCQA single letters and RAVEL
+    # multi-word labels matched verbatim against the alphabet). Arithmetic
+    # sets this to take the first character of multi-digit ``raw_output``.
+    label_from_output: Optional[Callable[[str], str]] = None
 
     cost_metric: str = "sq_l2"          # "sq_l2" | "l1" | "cosine"
     normalize_signatures: bool = True
@@ -150,21 +168,26 @@ def _solve(
 
 
 def _aggregate_to_layer_table(
-    site_signatures: Dict[SiteKey, torch.Tensor],
+    site_signatures: Dict,
     *,
     normalize: bool,
 ) -> Tuple[torch.Tensor, List[int]]:
     """Mean-aggregate per-site rows into one row per layer.
 
-    The source ``run_progressive_plot.py`` Stage A uses ``FullStateSite`` per
-    timestep — one *site* per layer, no aggregation. Our MIB experiment
-    declares one site per (layer, token_position) pair, so we collapse the
-    token-position axis by mean. After collapse, each layer is one row in
-    the same output-prob-delta space as a single site signature.
+    Source ``run_progressive_plot.py`` Stage A uses ``FullStateSite`` per
+    timestep — one site per layer, no aggregation. Our MIB experiment
+    declares one site per (layer, token_position) pair (residual stream)
+    or (layer, head, token_position) (attention head), so we collapse the
+    non-layer axes by mean. After collapse, each layer is one row in the
+    same output-prob-delta space as a single site signature.
+
+    Accepts both 2-tuple ``(layer, token_pos)`` and 3-tuple ``(layer,
+    head, token_pos)`` keys; the layer is always at index 0.
     """
     by_layer: Dict[int, List[torch.Tensor]] = {}
-    for (layer, _tok_id), row in site_signatures.items():
-        by_layer.setdefault(int(layer), []).append(row)
+    for key, row in site_signatures.items():
+        layer = int(key[0])
+        by_layer.setdefault(layer, []).append(row)
     layer_ids = sorted(by_layer)
     rows = [aggregate_mean(by_layer[L]) for L in layer_ids]
     table = torch.stack(rows, dim=0)
@@ -174,29 +197,48 @@ def _aggregate_to_layer_table(
 
 
 def _layer_token_table(
-    site_signatures: Dict[SiteKey, torch.Tensor],
+    site_signatures: Dict,
     layer: int,
-) -> Tuple[torch.Tensor, List[str]]:
-    """Stack the per-token-position signatures for one layer.
+) -> Tuple[torch.Tensor, List]:
+    """Stack the per-subspace signatures for one layer.
 
-    Already-collected signatures are reused — Stage B does not require new
-    forward passes. Returns ``(num_token_positions, K)``.
+    For residual-stream sites the "subspace within layer" is the token
+    position — keys are 2-tuple ``(layer, token_pos)``, returned subspace
+    ids are the token-pos strings.
+
+    For attention-head sites the "subspace within layer" is the head
+    index — keys are 3-tuple ``(layer, head, token_pos)``, returned ids
+    are 2-tuples ``(head, token_pos)`` so Stage B can preserve both axes
+    when multiple token positions exist (IOI uses a single ``"all"``
+    position so this just degenerates to per-head).
+
+    Mirrors source PLOT's "Stage B = subspace within timestep" structure.
     """
-    keys = [k for k in site_signatures if k[0] == layer]
-    keys.sort(key=lambda k: k[1])
+    keys = [k for k in site_signatures if int(k[0]) == int(layer)]
     if not keys:
         raise KeyError(f"no signatures cached for layer {layer}")
+    # Sort by the non-layer suffix so the OT plan ordering is stable.
+    keys.sort(key=lambda k: tuple(k[1:]))
     rows = [site_signatures[k] for k in keys]
-    return torch.stack(rows, dim=0), [k[1] for k in keys]
+    if len(keys[0]) == 2:
+        ids = [k[1] for k in keys]                  # token_pos strings
+    else:
+        ids = [(int(k[1]), str(k[2])) for k in keys]  # (head, token_pos)
+    return torch.stack(rows, dim=0), ids
 
 
 def _layer_iia(
-    iia_per_site: Dict[SiteKey, float], layer: int,
+    iia_per_site: Dict, layer: int,
 ) -> float:
-    """Mean IIA across a layer's token positions — the source's Stage A score
-    is the IIA of an interchange at the *full state* per timestep, which here
-    we approximate by averaging IIA over all token positions at a layer."""
-    vals = [v for (L, _t), v in iia_per_site.items() if int(L) == int(layer)]
+    """Mean IIA across a layer's subspaces — token positions for residual
+    stream sites, ``(head, token_pos)`` pairs for attention head sites.
+    Source PLOT's Stage A score is the IIA of an interchange at the
+    *full state* per timestep; we approximate by averaging within-layer.
+
+    Accepts both 2-tuple ``(layer, token_pos)`` and 3-tuple
+    ``(layer, head, token_pos)`` keys.
+    """
+    vals = [v for k, v in iia_per_site.items() if int(k[0]) == int(layer)]
     if not vals:
         return 0.0
     return float(sum(vals) / len(vals))
@@ -303,9 +345,51 @@ def select_sites_via_plot(
     alphabet = _resolve_config_alphabet(config, bundle)
     V = len(config.variables)
 
-    # ---- Decide per-row datasets (per_row_filter_attribute path) --------
+    # ---- Decide per-row datasets ---------------------------------------
+    # Three modes (mutually exclusive):
+    #   1. per_row_split_datasets — entirely separate datasets per row
+    #      (IOI: each row uses a different counterfactual split). All rows
+    #      interchange the same CM variable (``calibration_variable``).
+    #   2. per_row_filter_attribute — same dataset filtered per row by an
+    #      input attribute (RAVEL: each row sees only bases whose
+    #      ``queried_attribute`` matches its variable name). Each row
+    #      interchanges its own CM variable (``variables[i]``).
+    #   3. None of the above — single shared dataset, classic per-variable
+    #      interchange (MCQA, ARC, arithmetic).
+    use_per_row_split = config.per_row_split_datasets is not None
     use_per_row_filter = config.per_row_filter_attribute is not None
-    if use_per_row_filter:
+    if use_per_row_split and use_per_row_filter:
+        raise ValueError(
+            "per_row_split_datasets and per_row_filter_attribute are "
+            "mutually exclusive."
+        )
+    if use_per_row_split:
+        if len(config.per_row_split_datasets) != V:
+            raise ValueError(
+                f"per_row_split_datasets has {len(config.per_row_split_datasets)} "
+                f"entries; expected {V} (one per variable / OT row)."
+            )
+        if config.calibration_variable is None:
+            raise ValueError(
+                "per_row_split_datasets mode requires calibration_variable to "
+                "be set explicitly — all rows share that variable's "
+                "interchange semantics."
+            )
+        # Resolve named splits to dataset objects. ``fit_dataset`` is the
+        # default fallback for any names not in bundle.train_data.
+        train_data = getattr(bundle, "train_data", None) or {}
+        per_row_datasets = []
+        for split_name in config.per_row_split_datasets:
+            if split_name in train_data:
+                per_row_datasets.append(train_data[split_name])
+            else:
+                raise KeyError(
+                    f"per_row_split_datasets references unknown split "
+                    f"{split_name!r}; bundle.train_data has "
+                    f"{sorted(train_data.keys())}"
+                )
+        per_row_filters = None
+    elif use_per_row_filter:
         per_row_filters = [
             _make_attribute_filter(config.per_row_filter_attribute, v)
             for v in config.variables
@@ -318,21 +402,41 @@ def select_sites_via_plot(
         per_row_filters = None
         per_row_datasets = [fit_dataset] * V
 
-    abstract_table = build_abstract_table(
-        bundle.causal_model, fit_dataset,
-        variables=config.variables,
-        alphabet=alphabet,
-        normalize=config.normalize_signatures,
-        per_row_dataset_filter=per_row_filters,
-        on_unknown_label=config.on_unknown_label,
-    )                                                          # (V, K)
+    if use_per_row_split:
+        # Build the abstract table row-by-row: each row interchanges the
+        # same calibration variable but on its own dataset's source pairs.
+        from .features import build_abstract_effect_row  # noqa: E402
+        rows = []
+        for ds_v in per_row_datasets:
+            row = build_abstract_effect_row(
+                bundle.causal_model, ds_v,
+                variable=config.calibration_variable,
+                alphabet=alphabet,
+                normalize=config.normalize_signatures,
+                on_unknown_label=config.on_unknown_label,
+                output_key=config.output_key,
+                label_from_output=config.label_from_output,
+            )
+            rows.append(row)
+        abstract_table = torch.stack(rows, dim=0)
+    else:
+        abstract_table = build_abstract_table(
+            bundle.causal_model, fit_dataset,
+            variables=config.variables,
+            alphabet=alphabet,
+            normalize=config.normalize_signatures,
+            per_row_dataset_filter=per_row_filters,
+            on_unknown_label=config.on_unknown_label,
+            output_key=config.output_key,
+            label_from_output=config.label_from_output,
+        )                                                      # (V, K)
 
-    # ---- Neural collection: per-row when filter set, else single shared ---
+    # ---- Neural collection: per-row when filter / split mode, else shared
     per_row_outputs: List[NeuralOutputs] = []
     per_row_sigs: List[Dict[SiteKey, torch.Tensor]] = []
     per_row_layer_tables: List[torch.Tensor] = []
     layer_ids: List[int] = []
-    if use_per_row_filter:
+    if use_per_row_filter or use_per_row_split:
         for v_idx, ds_v in enumerate(per_row_datasets):
             outputs_v = collect_neural_outputs(
                 bundle, ds_v, alphabet=alphabet, verbose=verbose,
@@ -367,7 +471,14 @@ def select_sites_via_plot(
 
     # ---- IIA scoring data: based on calibration variable ---------------
     calib_var = _calibration_variable(config)
-    if use_per_row_filter:
+    if use_per_row_split:
+        # All rows interchange the same calibration variable. Use the
+        # first per-row split as the IIA evaluation dataset — picking any
+        # one is fine since the variable is consistent across rows.
+        # Future: union all rows for a bigger sample.
+        iia_outputs = per_row_outputs[0]
+        iia_dataset = per_row_datasets[0]
+    elif use_per_row_filter:
         # Use the per-row outputs aligned with the calibration variable.
         if calib_var in config.variables:
             calib_idx = list(config.variables).index(calib_var)
@@ -391,6 +502,8 @@ def select_sites_via_plot(
         bundle.causal_model, iia_dataset,
         variable=calib_var, alphabet=alphabet,
         on_unknown_label=config.on_unknown_label,
+        output_key=config.output_key,
+        label_from_output=config.label_from_output,
     )
     iia_by_site = per_site_iia(iia_outputs, expected_cf)
 
@@ -496,12 +609,16 @@ def select_sites_via_plot(
             normed_b = row_normalize(pi)
             for top_k in b_topk_grid:
                 k = min(int(top_k), len(token_ids))
-                picks: List[SiteKey] = []
+                picks: List = []
                 for r in rows_owning:
-                    picks.extend(
-                        (int(layer), str(token_ids[idx]))
-                        for idx, _ in truncate_row(normed_b[r], k)
-                    )
+                    for idx, _ in truncate_row(normed_b[r], k):
+                        sub = token_ids[idx]
+                        if isinstance(sub, tuple) and len(sub) == 2:
+                            # (head, token_pos) → 3-tuple site key.
+                            picks.append((int(layer), int(sub[0]), str(sub[1])))
+                        else:
+                            # Plain token_pos string → 2-tuple residual key.
+                            picks.append((int(layer), str(sub)))
                 # Dedupe (multiple rows may agree on the same position).
                 seen = set()
                 dedup = []

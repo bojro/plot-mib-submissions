@@ -108,23 +108,44 @@ def resolve_tokens(alphabet: LabelAlphabet, tokenizer) -> LabelAlphabet:
     ``label_to_dim`` is rewritten so collided labels share a dim. Returns a
     new alphabet (alphabets are frozen).
 
-    The leading-space variant is used to match how an LM produces tokens
-    after a prompt: ``" France"`` rather than ``"France"``. For single-char
-    labels (legacy letters), the source PLOT pipeline historically used the
-    leading-space encoding; this preserves that.
+    Tokenizer choice rules (in order of preference):
+
+    1. ``" {lab}"`` if it encodes to a single token (e.g. Gemma " A" → 1 token,
+       " France" → 1 token). Matches how the LM emits the label after a prompt
+       that does not already end in whitespace.
+    2. ``lab`` (no leading space) if it encodes to a single token (e.g. Gemma
+       "0" → 235276). Matches how the LM emits the label after a prompt that
+       *does* end in a space (arithmetic prompts trail with " ", and Gemma
+       tokenises " 0" as ``[space_token, "0"_token]`` two tokens, of which the
+       first is a generic leading-space token shared across all digits — using
+       it would compact the entire digit alphabet to 1 dim).
+    3. Otherwise, take the second token of ``" {lab}"`` (skip the generic
+       leading-space token). Last resort fallback so we never raise for a
+       label that *can* be tokenised.
+
+    The historic behaviour (always pick ``" {lab}"[0]``) caused a silent
+    1-dim collapse on Gemma's digit alphabet; arithmetic Stage A returned
+    uniform plans and IIA = 1.0 on every site. The new rules preserve the
+    MCQA / RAVEL behaviour (their labels hit rule 1) and fix arithmetic.
     """
     label_to_first_tok: Dict[str, int] = {}
     for lab in alphabet.labels:
-        # Try " {lab}" first; fall back to no-space if encoder yields empty.
-        for variant in (f" {lab}", lab):
-            enc = tokenizer.encode(variant, add_special_tokens=False)
-            if enc:
-                label_to_first_tok[lab] = int(enc[0])
-                break
+        spaced = tokenizer.encode(f" {lab}", add_special_tokens=False)
+        plain = tokenizer.encode(lab, add_special_tokens=False)
+        if spaced and len(spaced) == 1:
+            tid = int(spaced[0])
+        elif plain and len(plain) == 1:
+            tid = int(plain[0])
+        elif spaced and len(spaced) >= 2:
+            # Skip the leading-space token; the actual label token is index 1.
+            tid = int(spaced[1])
+        elif plain:
+            tid = int(plain[0])
         else:
             raise ValueError(
                 f"label {lab!r} did not encode to any tokens with this tokenizer"
             )
+        label_to_first_tok[lab] = tid
     # Compact: new dim per UNIQUE token id, in order of first appearance.
     unique_tokens: List[int] = []
     tok_to_new_dim: Dict[int, int] = {}

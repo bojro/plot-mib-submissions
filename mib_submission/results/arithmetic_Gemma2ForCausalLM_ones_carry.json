@@ -1,0 +1,87 @@
+{
+  "method_name": "submission",
+  "model_name": "Gemma2ForCausalLM",
+  "task_name": "arithmetic",
+  "dataset": {
+    "random_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-op2_last)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "op2_last"
+          },
+          "ones_carry": {
+            "average_score": 0.5200892857142857
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-last)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "last"
+          },
+          "ones_carry": {
+            "average_score": 0.28683035714285715
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-op2_last)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "op2_last"
+          },
+          "ones_carry": {
+            "average_score": 0.5133928571428571
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-last)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "last"
+          },
+          "ones_carry": {
+            "average_score": 0.6216517857142857
+          }
+        }
+      }
+    },
+    "ones_carry_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-op2_last)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "op2_last"
+          },
+          "ones_carry": {
+            "average_score": 0.022532188841201718
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-last)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "last"
+          },
+          "ones_carry": {
+            "average_score": 0.27467811158798283
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-op2_last)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "op2_last"
+          },
+          "ones_carry": {
+            "average_score": 0.001072961373390558
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-last)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "last"
+          },
+          "ones_carry": {
+            "average_score": 0.25858369098712447
+          }
+        }
+      }
+    }
+  }
+}

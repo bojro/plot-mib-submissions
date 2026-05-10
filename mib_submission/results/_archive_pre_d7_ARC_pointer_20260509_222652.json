@@ -1,0 +1,235 @@
+{
+  "method_name": "submission",
+  "model_name": "Gemma2ForCausalLM",
+  "task_name": "ARC_easy",
+  "dataset": {
+    "answerPosition_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.15609756097560976
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.22073170731707317
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.17560975609756097
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.9865853658536585
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.5902439024390244
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.9817073170731707
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.9658536585365853
+          }
+        }
+      }
+    },
+    "randomLetter_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.8064516129032258
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.9370967741935484
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.782258064516129
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.8274193548387097
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.8403225806451613
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.6419354838709678
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 1.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.5758064516129032
+          }
+        }
+      }
+    },
+    "answerPosition_randomLetter_test": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.06491228070175438
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.3385964912280702
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.07017543859649122
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.6666666666666666
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.5824561403508772
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.4456140350877193
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol"
+          },
+          "answer_pointer": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "last_token"
+          },
+          "answer_pointer": {
+            "average_score": 0.47017543859649125
+          }
+        }
+      }
+    }
+  }
+}

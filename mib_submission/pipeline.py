@@ -224,3 +224,160 @@ def setup_residual_experiment(
         test_data=test_data,
         experiment=experiment,
     )
+
+
+# --------------------------------------------------------------------------- #
+# IOI: attention-head experiment setup                                        #
+# --------------------------------------------------------------------------- #
+
+def setup_attention_head_experiment(
+    *,
+    model_name: str,
+    layer_head_list: Iterable[Tuple[int, int]],
+    target_variables: List[str],
+    linear_params: dict,
+    dtype: torch.dtype = torch.float16,
+    device: Optional[str] = None,
+    dataset_size: Optional[int] = None,
+    load_private_data: bool = False,
+    config_overrides: Optional[dict] = None,
+    verbose: bool = False,
+    per_site_units: bool = True,
+) -> ExperimentBundle:
+    """Parallel to ``setup_residual_experiment`` but for IOI cells.
+
+    Differences from the residual-stream variant:
+
+    1. **Causal model needs linear parameters** — the IOI causal model's
+       ``logit_diff`` mechanism reads ``{bias, token_coeff, position_coeff}``.
+       Pass them via ``linear_params``; bootstrap with
+       ``mib_submission.ioi.bootstrap.bootstrap_linear_params``.
+
+    2. **IOI-specific pipeline config** — `max_length=32`, `logit_labels=True`,
+       `max_new_tokens=1` (matches `ioi_utils.setup_pipeline`'s non-special
+       branch). The GPT-2 special branch (`position_ids=True`, fp32) is not
+       wired here — see CLAUDE.md operational gotchas.
+
+    3. **Sites = (layer, head)** — built from ``layer_head_list``. Token
+       positions come from ``ioi_task.get_token_positions`` which returns a
+       single ``id="all"`` position covering the full sequence.
+
+    4. **Filter uses ``filter_checker`` from ``ioi_utils``** (not the
+       default ``expected in output_text``).
+
+    5. **Per-site sweep mode** (``per_site_units=True``, default) — the
+       upstream ``PatchAttentionHeads`` builds ``model_units_lists`` as a
+       single joint entry covering all heads. We re-shape it to one entry
+       per (layer, head, position) so ``collect_neural_outputs`` can
+       collect per-site signatures. Set ``per_site_units=False`` for joint
+       interventions (used at DAS-train time once PLOT has picked sites).
+    """
+    add_mib_to_syspath()
+
+    task = "ioi_task"
+    task_mod = importlib.import_module("tasks.IOI_task.ioi_task")
+    counterfactual_datasets = task_mod.get_counterfactual_datasets(
+        hf=True, size=dataset_size, load_private_data=load_private_data,
+    )
+    # IOI's get_causal_model REQUIRES the parameters dict (bias / coeffs).
+    causal_model = task_mod.get_causal_model(linear_params)
+
+    from neural.pipeline import LMPipeline  # type: ignore[import-not-found]
+    from experiments.filter_experiment import FilterExperiment  # type: ignore[import-not-found]
+    from experiments.attention_head_experiment import PatchAttentionHeads  # type: ignore[import-not-found]
+
+    # Use the harness IOI checker for filtering (substring match on output text).
+    sys.path.insert(0, str(MIB_TRACK / "baselines" / "ioi_baselines"))
+    from ioi_utils import filter_checker  # type: ignore[import-not-found]
+
+    if device is None:
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    pipeline = LMPipeline(
+        model_name,
+        max_new_tokens=1,
+        device=device,
+        dtype=dtype,
+        max_length=32,
+        logit_labels=True,
+    )
+    pipeline.tokenizer.padding_side = "left"
+
+    actual_class = pipeline.model.__class__.__name__
+    expected_class = _HF_MODEL_TO_CLASS_NAME.get(model_name, actual_class)
+    if expected_class != actual_class:
+        raise RuntimeError(
+            f"Model {model_name!r} loaded as {actual_class!r}, "
+            f"but MIB expects {expected_class!r}. Submission will be rejected."
+        )
+
+    filter_exp = FilterExperiment(pipeline, causal_model, filter_checker)
+    filtered_datasets = filter_exp.filter(
+        counterfactual_datasets,
+        verbose=verbose,
+        batch_size=64,
+    )
+
+    token_positions = task_mod.get_token_positions(pipeline, causal_model)
+    train_data, test_data = _split_filtered_datasets(filtered_datasets)
+
+    layer_head_list = list(layer_head_list)
+
+    config = {
+        "batch_size": 128,
+        "evaluation_batch_size": 1024,
+        "training_epoch": 2,
+        "n_features": 32,
+        "regularization_coefficient": 0.0,
+        "output_scores": True,
+        "shuffle": True,
+        "temperature_schedule": (1.0, 0.01),
+        "init_lr": 1.0,
+        "check_raw": True,
+    }
+    if config_overrides:
+        config.update(config_overrides)
+
+    # Wire the IOI loss/metric function from the harness.
+    from ioi_utils import ioi_loss_and_metric_fn, checker as ioi_checker  # type: ignore[import-not-found]
+    config.setdefault(
+        "loss_and_metric_fn",
+        lambda pipe, intervenable, batch, units: ioi_loss_and_metric_fn(
+            pipe, intervenable, batch, units,
+        ),
+    )
+
+    experiment = PatchAttentionHeads(
+        pipeline=pipeline,
+        causal_model=causal_model,
+        layer_head_list=layer_head_list,
+        token_positions=token_positions,
+        checker=lambda logits, params: ioi_checker(logits, params, pipeline),
+        config=config,
+    )
+
+    if per_site_units:
+        # Re-shape: PatchAttentionHeads ships with `model_units_lists =
+        # [[ all_units ]]` — a single joint entry that intervenes on all
+        # heads at once. PLOT needs per-site signatures; flatten to one
+        # entry per (layer, head, token_pos).
+        flat = []
+        for entry in experiment.model_units_lists:
+            for inner in entry:
+                for unit in inner:
+                    flat.append([[unit]])
+        experiment.model_units_lists = flat
+
+    return ExperimentBundle(
+        task=task,
+        model_name=model_name,
+        model_class_name=actual_class,
+        target_variables=list(target_variables),
+        layers=sorted({L for L, _ in layer_head_list}),
+        causal_model=causal_model,
+        pipeline=pipeline,
+        token_positions=token_positions,
+        filtered_datasets=filtered_datasets,
+        train_data=train_data,
+        test_data=test_data,
+        experiment=experiment,
+    )

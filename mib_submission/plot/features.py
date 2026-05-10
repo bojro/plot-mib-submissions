@@ -125,7 +125,10 @@ def normalize_rows(M: torch.Tensor, eps: float = 1e-30) -> torch.Tensor:
     return M / norms
 
 
-def _causal_letter_pairs(causal_model, dataset, *, variable: str) -> Tuple[List[str], List[str]]:
+def _causal_letter_pairs(
+    causal_model, dataset, *, variable: str, output_key: str = "answer",
+    label_from_output: Optional[Callable[[str], str]] = None,
+) -> Tuple[List[str], List[str]]:
     """Per-example (base_label, source_label) under interchange of ``variable``.
 
     Skips examples where the interchange leaves a downstream variable
@@ -134,8 +137,9 @@ def _causal_letter_pairs(causal_model, dataset, *, variable: str) -> Tuple[List[
     row but is the only safe option without filtering the dataset upstream.
 
     Despite the legacy "letter" naming, the returned strings are stripped
-    versions of ``causal_model.run_*()["answer"]`` — for MCQA/ARC these are
-    single letters; for RAVEL these are word strings like "France".
+    versions of ``causal_model.run_*()[output_key]`` — for MCQA/ARC these are
+    single letters from ``"answer"``; for RAVEL these are word strings from
+    ``"answer"``; for arithmetic these are digit strings from ``"raw_output"``.
     """
     base_letters: List[str] = []
     source_letters: List[str] = []
@@ -147,8 +151,11 @@ def _causal_letter_pairs(causal_model, dataset, *, variable: str) -> Tuple[List[
                 example["input"],
                 {variable: example["counterfactual_inputs"][0]},
             )
-            base_letter = str(base_out["answer"]).strip()
-            source_letter = str(cf_setting["answer"]).strip()
+            base_letter = str(base_out[output_key]).strip()
+            source_letter = str(cf_setting[output_key]).strip()
+            if label_from_output is not None:
+                base_letter = label_from_output(base_letter)
+                source_letter = label_from_output(source_letter)
         except (TypeError, KeyError, IndexError):
             n_skipped += 1
             continue
@@ -173,6 +180,8 @@ def build_abstract_effect_row(
     normalize: bool = True,
     dataset_filter: Optional[Callable[[dict], bool]] = None,
     on_unknown_label: str = "raise",  # "raise" | "skip"
+    output_key: str = "answer",
+    label_from_output: Optional[Callable[[str], str]] = None,
 ) -> torch.Tensor:
     """One-row abstract-effect signature for a single OT variable.
 
@@ -197,7 +206,8 @@ def build_abstract_effect_row(
     alpha = _resolve_alphabet(alphabet, letters)
     ds = dataset if dataset_filter is None else _filter_dataset(dataset, dataset_filter)
     base_letters, source_letters = _causal_letter_pairs(
-        causal_model, ds, variable=variable
+        causal_model, ds, variable=variable, output_key=output_key,
+        label_from_output=label_from_output,
     )
     K = alpha.num_dims
     rows: List[torch.Tensor] = []
@@ -241,6 +251,8 @@ def build_abstract_table(
     normalize: bool = True,
     per_row_dataset_filter: Optional[Sequence[Optional[Callable[[dict], bool]]]] = None,
     on_unknown_label: str = "raise",
+    output_key: str = "answer",
+    label_from_output: Optional[Callable[[str], str]] = None,
 ) -> torch.Tensor:
     """Stack one abstract row per variable. Shape ``(V, alphabet.num_dims)``.
 
@@ -264,6 +276,8 @@ def build_abstract_table(
             normalize=normalize,
             dataset_filter=ds_filter,
             on_unknown_label=on_unknown_label,
+            output_key=output_key,
+            label_from_output=label_from_output,
         ))
     return torch.stack(rows, dim=0)
 
@@ -304,6 +318,9 @@ def collect_neural_outputs(
 
     cf_probs_by_site: Dict[SiteKey, torch.Tensor] = {}
     cf_argmax_by_site: Dict[SiteKey, torch.Tensor] = {}
+    # Dispatch site-key extraction by unit type — ResidualStream uses
+    # ``(layer, token_pos)``; AttentionHead uses ``(layer, head, token_pos)``.
+    from ..site_keys import attention_head_site_key_for_unit
     for model_units_list in bundle.experiment.model_units_lists:
         unit = model_units_list[0][0]
         per_batch = _run_interchange_interventions(
@@ -316,7 +333,10 @@ def collect_neural_outputs(
         )
         cf_logits = torch.cat([b[:, 0, :] for b in per_batch], dim=0)
         cf_probs = torch.softmax(cf_logits, dim=-1)[:, tok_ids]
-        key = site_key_for_unit(unit)
+        if hasattr(unit, "head"):
+            key = attention_head_site_key_for_unit(unit)
+        else:
+            key = site_key_for_unit(unit)
         cf_probs_by_site[key] = cf_probs
         cf_argmax_by_site[key] = torch.argmax(cf_probs, dim=-1)
     return NeuralOutputs(
@@ -386,6 +406,8 @@ def expected_cf_letter_indices(
     alphabet: Optional[LabelAlphabet] = None,
     letters: Optional[str] = None,
     on_unknown_label: str = "raise",  # "raise" | "skip"
+    output_key: str = "answer",
+    label_from_output: Optional[Callable[[str], str]] = None,
 ) -> torch.Tensor:
     """Per-example expected counterfactual label index after interchanging
     ``variable`` from the source. This is the IIA target.
@@ -401,7 +423,9 @@ def expected_cf_letter_indices(
             example["input"],
             {variable: example["counterfactual_inputs"][0]},
         )
-        letter = str(cf_setting["answer"]).strip()
+        letter = str(cf_setting[output_key]).strip()
+        if label_from_output is not None:
+            letter = label_from_output(letter)
         idx = alpha.label_to_dim.get(letter)
         if idx is None:
             if on_unknown_label == "raise":

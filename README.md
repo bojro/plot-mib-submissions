@@ -1,143 +1,64 @@
-# PLOT MIB Submissions
+# PLOT MIB submission
 
-PLOT (Progressive Localized Optimal Transport) submissions for the MIB Causal Variable Localization Track.
+PLOT (Progressive Localized Optimal Transport) submissions to the [MIB Causal Variable Localization Track](https://github.com/aaronmueller/MIB). PLOT picks `(layer, token-position)` sites via two-stage Sinkhorn OT, then trains DAS rotations only at the picked sites — targeting baseline-DAS-comparable accuracy at ≤10× fewer rotations trained.
 
-PLOT picks a small set of (layer, token-position) sites via two-stage optimal transport, then trains DAS rotations only at the picked sites. Goal: comparable accuracy to baseline DAS at roughly an order-of-magnitude reduction in DAS rotation training.
+## Headline status
 
-## Status
+**12 of 26 cells with submissions** (46.2%). 11 at full quality, 1 (arithmetic) at smoke.
 
-**7 / 26 cells shipped** (as of 2026-05-08).
+Of the 12 shipped:
 
-- Per-cell results table (auto-generated): [`mib_submission/results/RESULTS.md`](mib_submission/results/RESULTS.md)
-- Status tracker: [`mib_submission/results/CELLS.md`](mib_submission/results/CELLS.md)
-- Methodological narrative: [`mib_submission/results/JOURNAL.md`](mib_submission/results/JOURNAL.md)
-- Cell-1 port story (historical): [`mib_submission/JOURNEY.md`](mib_submission/JOURNEY.md)
-- Method limits: [`mib_submission/PLOT_SHORTCOMINGS.md`](mib_submission/PLOT_SHORTCOMINGS.md)
-- Project plan + AI assistant guidance: [`CLAUDE.md`](CLAUDE.md)
+| status | cells | mechanism |
+|---|---|---|
+| 🏆 win/tie vs DAS leaderboard | 1 (Qwen pointer), 7 (ARC pointer), 8 (ARC answer)\*, 22 (RAVEL Continent) | PLOT picks well |
+| 📏 small structural gap (~5–7%) | 3 (Gemma pointer), 4 (Gemma answer) | confirmed outside seed band |
+| ❌ documented structural gap | 2 (Qwen answer), 13/14 (IOI), 21/23 (RAVEL Country/Language) | each diagnosed in `mib_submission/PLOT_SHORTCOMINGS.md` |
+| ⚠ smoke quality | 11 (arithmetic) | scale-up regressed; reverted to smoke |
 
-## Setup (fresh machine)
+\* Cell 8's 0.999 score includes a non-obvious mechanism — see `mib_submission/PLOT_SHORTCOMINGS.md` §15.
 
-Tested on Python 3.12. Linux/WSL/macOS. Requires CUDA for Gemma/Llama at reasonable speed. Tested on RTX 4060 Laptop (8 GB VRAM) — that's enough for Gemma-2-2B but not Llama-3.1-8B.
+The other 14 of 26 cells require ≥16 GB GPU (Qwen/Gemma IOI + 10 Llama cells); deferred to cloud.
 
-```bash
-git clone <this-repo> plot-mib-submissions
-cd plot-mib-submissions
+## Where to look
 
-# Pull the MIB harness (gitignored)
-# WSL note: clone to ~/MIB and symlink — /mnt/c can't chmod git lockfiles.
-git clone https://github.com/aaronmueller/MIB.git ~/MIB
-cd ~/MIB && git checkout b69dabe9899251d4a8fe90789afa4d655afc84c7
-git submodule update --init --recursive MIB-causal-variable-track  # not the circuit-track submodule
-cd -
-ln -sf ~/MIB MIB
+- **`CLAUDE.md`** — project context, status table, leaderboard comparison, rollout plan. Dense; engineer-oriented.
+- **`mib_submission/PLOT_SHORTCOMINGS.md`** — 15-section catalog of diagnosed limitations. Read this for a calibrated view of where PLOT works vs doesn't, and *why*.
+- **`mib_submission/results/RESULTS.md`** — auto-generated per-cell IIA tables.
+- **`mib_submission/results/CELLS.md`** — per-cell status tracker.
+- **`mib_submission/results/JOURNAL.md`** — methodological narrative, append-only by date. The full engineering record.
+- **`HYPOTHESES.md`** — experimental hypotheses and outcomes from the diagnostic sessions.
 
-# Python venv (3.12 specifically — sae_lens requires it)
-# Use uv if you don't have system 3.12: `curl -LsSf https://astral.sh/uv/install.sh | sh && uv python install 3.12`
-~/.local/bin/uv venv --python 3.12 ~/.venv-mib
-ln -sf ~/.venv-mib .venv-mib
-~/.local/bin/uv pip install --python ~/.venv-mib/bin/python \
-    -r MIB/MIB-causal-variable-track/requirements.txt
+## What's the value proposition
 
-# HF token (Gemma is gated)
-mkdir -p ~/.cache/huggingface
-echo -n 'hf_<your_token>' > ~/.cache/huggingface/token
-```
+PLOT trains DAS rotations at **2–7 picked sites per cell** vs the baseline's **72 sites** (every layer × token position). On cells where PLOT's site selection is well-matched to the task, scores are competitive at 10–25× fewer trained rotations. On cells where PLOT's signature design picks the wrong sites, the gap to baseline DAS is structural and documented.
 
-Verify CUDA + dataset access:
+A surprise finding from the diagnostic sessions: PLOT's value-add is concentrated in **layer selection** (Stage A). Stage B (position selection) and DAS training can be subtractive on some cells — see `mib_submission/PLOT_SHORTCOMINGS.md` §15. A leaner "Stage A only" PLOT remains an open follow-up.
+
+## Reproducing
 
 ```bash
-.venv-mib/bin/python -c "import torch; print('CUDA:', torch.cuda.is_available())"
-.venv-mib/bin/python -c "from huggingface_hub import whoami; print(whoami()['name'])"
+# Verify the shipped submissions
+.venv-mib/bin/python MIB/MIB-causal-variable-track/verify_submission.py submissions/plot
+
+# Run a single cell end-to-end (defaults to MCQA × Gemma × answer)
+.venv-mib/bin/python -m mib_submission.plot.run \
+    --task <TASK> --model <MODEL> --variable <VARIABLE>
+
+# Patched eval driver (handles harness gotchas: per-task max_new_tokens, IOI position_ids fix)
+.venv-mib/bin/python scripts/eval_cell.py --cell <cell_folder_name>
+
+# Tests (126 currently passing)
+.venv-mib/bin/python -m pytest tests/
 ```
 
-## Running a cell
+The `MIB/` submodule, `submissions/`, `logs/`, `models/`, and `.venv-mib/` are gitignored and need to be created on a fresh clone — see `CLAUDE.md` for the WSL-specific setup notes (chmod issues on `/mnt/c` mean MIB and the venv must be cloned to `~/` and symlinked).
 
-Use the CLI:
+## Hardware
 
-```bash
-.venv-mib/bin/python -u -m mib_submission.plot.run \
-    --task <TASK> \
-    --model <MODEL_NAME> \
-    --variable <VARIABLE> \
-    [--train-batch-size 16]   # use for ARC/RAVEL on 8GB VRAM
-    [--epochs N]
-    [--n-features N]
-    [--dataset-size N]
-    [--bypass-sites "L:tok,L:tok"]   # skip Stage A/B with hardcoded picks
-    > logs/<cell>.log 2>&1
-```
+Developed on an 8 GB RTX 4060 Laptop. 12 of 26 cells fit at this scale. The other 14 (4 Qwen/Gemma IOI cells via pyvene's `IntervenableModel` + 10 Llama-8B cells) need ≥16 GB VRAM — cloud GPU work, deferred.
 
-Per-task defaults (`PlotConfig` + DAS hyperparameters) live in `mib_submission/plot/configs.py` — adding a new cell is a one-line addition there, not editing `run.py`.
+## Caveats for a careful reader
 
-After PLOT writes `submissions/plot/<cell>/` and `verify_submission.py` says "Perfect submission":
-
-```bash
-# Eval (call evaluate_submission_task directly — the harness's --no-private_data CLI flag
-# does not exist in the pinned commit)
-.venv-mib/bin/python -u -c "
-import sys
-from pathlib import Path
-ROOT = Path('.')
-TRACK = ROOT / 'MIB' / 'MIB-causal-variable-track'
-sys.path.insert(0, str(TRACK)); sys.path.insert(0, str(TRACK / 'CausalAbstraction'))
-from evaluate_submission import evaluate_submission_task
-evaluate_submission_task(
-    task_folder_path=str(ROOT / 'submissions/plot/<cell>'),
-    submission_base_path=str(ROOT / 'submissions/plot'),
-    private_data=False, public_data=True,
-)
-"
-```
-
-Archive + regenerate the results doc:
-
-```bash
-cp submissions/plot/<cell>/*results.json mib_submission/results/<cell>.json
-# Bump the cell row in CELLS.md (☐ → ☑)
-.venv-mib/bin/python -m mib_submission.results._aggregate \
-    --write mib_submission/results/RESULTS.md
-```
-
-If the run revealed something methodologically interesting, append a short note to `JOURNAL.md`.
-
-## Repository layout
-
-```
-mib_submission/
-├── pipeline.py                 # setup_residual_experiment + ExperimentBundle
-├── serialize.py                # write_submission for on-disk MIB triplets
-├── apply_results.py            # alternative save path
-├── method_to_featurizer.py     # MethodResult → Featurizer encoding
-├── featurizers.py              # re-exports of upstream module classes
-├── signatures.py               # alphabet_token_ids helper (legacy MCQA path)
-├── site_keys.py                # (layer, token_position) key helper
-├── activations.py              # base activation collection (unused by PLOT)
-├── plot/
-│   ├── _alphabets.py           # LabelAlphabet (letter / multi-string / causal-model)
-│   ├── features.py             # signatures + abstract table; per-row filter support
-│   ├── transport.py            # Sinkhorn solvers (verbatim port)
-│   ├── pipeline.py             # select_sites_via_plot (Stage A + B + calibration)
-│   ├── configs.py              # per-task PlotConfig presets + RunConfig
-│   ├── run.py                  # CLI driver
-│   ├── bucketed.py             # parked variant (see PLOT_SHORTCOMINGS §1)
-│   └── diagnose_costs.py       # granular cost-matrix dump
-├── results/
-│   ├── _aggregate.py           # generates RESULTS.md from raw JSON archives
-│   ├── RESULTS.md              # AUTO-GENERATED — don't edit by hand
-│   ├── CELLS.md                # 26-cell status tracker
-│   ├── JOURNAL.md              # methodological narrative
-│   └── *.json                  # archived eval outputs, one per cell
-├── JOURNEY.md
-├── PLOT_SHORTCOMINGS.md
-└── ENV.md
-
-tests/                          # 84 tests, all passing
-├── test_mib_plot.py
-├── test_mib_submission_cross_equiv.py
-├── test_mib_submission_roundtrip.py
-├── test_mib_submission_signatures.py
-├── test_results_aggregate.py
-└── test_alphabets_and_ravel.py
-```
-
-`MIB/`, `submissions/`, `logs/`, and `.venv-mib/` are gitignored — generated locally.
+- **Cell 8's 0.999 leaderboard-relative win comes from an interaction with the eval harness's identity-fallback** at unselected positions, not from PLOT-trained DAS rotations. Methodologically valid per the harness's scoring rules. Full mechanism documented in `mib_submission/PLOT_SHORTCOMINGS.md` §15.
+- **5 of 12 reachable cells have real structural gaps to DAS baseline.** Each is diagnosed in `PLOT_SHORTCOMINGS.md` (§2 cell 2, §13 cells 13/14, §14 cells 21/23). Closing them is out of scope for this submission.
+- **Cell 11 arithmetic ds=1024 scale-up regressed.** Reverted to the smoke result; the failed scale-up's submission is preserved at `submissions/_plot_backups/arithmetic_*_pre_c6_*` for reference.

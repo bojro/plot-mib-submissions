@@ -42,8 +42,28 @@ This config wires PLOT to use:
 - A custom checker (passed through ``setup_residual_experiment``) that
   handles multi-word answer matching.
 
-``arithmetic`` has a single causal variable (``ones_carry``) and is at risk
-of V=1 collapse — needs a workaround per CLAUDE.md, deferred.
+``arithmetic`` has a single causal variable (``ones_carry``) for scoring,
+but the causal model exposes 10 nodes total. We satisfy V≥2 by picking OT
+rows from non-target CM variables (allowed — RAVEL does the same; source
+PLOT's default rows are intermediate carry bits, not the target output).
+
+Two variants supported:
+
+- ``arithmetic_variant="C"`` (default): V=2 from ``{tens_out, hundreds_out}``.
+  Both are direct children of ``ones_carry`` in the SCM. This mirrors source
+  PLOT's S_i + C_i row mixing on the binary GRU adder (S and C rows are
+  always downstream of the carry chain). Patching a site that the model
+  uses to compute the carry will perturb both rows; sites that compute
+  only the ones digit will perturb neither (since ``ones_out`` is decoupled
+  from the carry). Best causal alignment.
+
+- ``arithmetic_variant="B"``: V=4 from ``{op1_ones, op2_ones, op1_tens,
+  op2_tens}``. Operand-digit interchanges; analogous to source PLOT's
+  ``flip_Ai`` / ``flip_Bi`` family rows. PLOT_SHORTCOMINGS §2 risk: these
+  rows pick sites that *represent* operands, not sites that compute the
+  carry. Kept as a fallback / diagnostic.
+
+Calibration is on ``ones_carry`` regardless of variant.
 
 ``ioi_task`` is intentionally absent: ``get_causal_model`` requires learned
 linear params (bootstrap step lives in
@@ -197,7 +217,12 @@ def _arc_v4_symbols(variable: str) -> PlotConfig:
         stage_a_epsilon_grid=(0.01, 0.03),
         stage_b_epsilon_grid=(0.003, 0.01, 0.03, 0.1),
         stage_a_top_k_grid=(1,),
-        stage_b_top_k_grid=(1, 2),
+        # Was (1, 2). Per PLOT_SHORTCOMINGS §8: ARC has only 2 token
+        # positions per layer, so top_k_grid=(1,2) lets Stage B select
+        # both positions per (row, layer), polluting the joint result
+        # with weak/non-converging extras. Tightened to (1,) on
+        # 2026-05-09 for D.7 — single best position per layer.
+        stage_b_top_k_grid=(1,),
     )
 
 
@@ -240,6 +265,208 @@ def _ravel_v3_attributes(variable: str) -> PlotConfig:
         stage_b_epsilon_grid=(0.003, 0.01, 0.03, 0.1),
         stage_a_top_k_grid=(1,),
         stage_b_top_k_grid=(1, 2),
+    )
+
+
+def _arithmetic_first_digit(out: str) -> str:
+    """Take the first digit of an arithmetic output. Used as PlotConfig's
+    ``label_from_output`` so signatures lookup against the digit alphabet
+    works regardless of whether the answer is 1, 2, or 3 characters long.
+    """
+    s = out.strip()
+    return s[:1] if s else ""
+
+
+def _arithmetic_v2_carry_children(variable: str) -> PlotConfig:
+    """Arithmetic V=2 OT rows on ``{tens_out, hundreds_out}`` (children of
+    ``ones_carry``). Default variant.
+
+    Both rows are SCM-downstream of the target ``ones_carry``. A site whose
+    residual encodes the carry will perturb both rows when patched; a site
+    that encodes only the ones-digit computation (decoupled from carry) will
+    perturb neither — providing causal contrast.
+
+    Two-token-position task (``op2_last``, ``last``) so we follow PLOT_
+    SHORTCOMINGS §8: ``stage_b_top_k_grid=(1,)`` to force Stage B to actually
+    select rather than degenerating to "keep both positions per layer".
+    """
+    if variable != "ones_carry":
+        raise ValueError(
+            f"arithmetic variable must be 'ones_carry' (only valid scoring "
+            f"variable per verify_submission.py:21); got {variable!r}"
+        )
+    return PlotConfig(
+        variables=("tens_out", "hundreds_out"),
+        calibration_variable="ones_carry",
+        letters="0123456789",
+        # Arithmetic outputs are multi-char ("68", "168"); the alphabet is
+        # the digit chars; project output to its first char.
+        output_key="raw_output",
+        label_from_output=_arithmetic_first_digit,
+        cost_metric="sq_l2",
+        normalize_signatures=True,
+        stage_a_solver="ot",
+        stage_b_solver="ot",
+        sinkhorn_iters=200,
+        target_row_index=0,
+        stage_a_epsilon_grid=(0.01, 0.03),
+        stage_b_epsilon_grid=(0.003, 0.01, 0.03, 0.1),
+        stage_a_top_k_grid=(1,),
+        stage_b_top_k_grid=(1,),  # 2-position task; (1,2) degenerates per §8
+    )
+
+
+def _arithmetic_v4_operands(variable: str) -> PlotConfig:
+    """Arithmetic V=4 OT rows on ``{op1_ones, op2_ones, op1_tens, op2_tens}``.
+
+    Diagnostic / fallback variant. Each row is an operand-digit interchange,
+    analogous to source PLOT's ``flip_Ai`` / ``flip_Bi`` family rows. Risk
+    per PLOT_SHORTCOMINGS §2: picks sites that represent operand digits,
+    not sites that compute the carry — but the carry sits downstream of
+    ``op{1,2}_ones`` so it should still appear in those rows' top picks.
+    """
+    if variable != "ones_carry":
+        raise ValueError(
+            f"arithmetic variable must be 'ones_carry'; got {variable!r}"
+        )
+    return PlotConfig(
+        variables=("op1_ones", "op2_ones", "op1_tens", "op2_tens"),
+        calibration_variable="ones_carry",
+        letters="0123456789",
+        output_key="raw_output",
+        label_from_output=_arithmetic_first_digit,
+        cost_metric="sq_l2",
+        normalize_signatures=True,
+        stage_a_solver="ot",
+        stage_b_solver="ot",
+        sinkhorn_iters=200,
+        target_row_index=0,  # op1_ones — a parent of ones_carry
+        stage_a_epsilon_grid=(0.01, 0.03),
+        stage_b_epsilon_grid=(0.003, 0.01, 0.03, 0.1),
+        stage_a_top_k_grid=(1,),
+        stage_b_top_k_grid=(1,),
+    )
+
+
+def _ioi_names_alphabet(*, scan_size: int = 2000) -> Tuple[str, ...]:
+    """Return the IOI name vocabulary as a tuple of strings — the alphabet
+    the LM's first-token softmax is projected onto for IOI signatures.
+
+    Sourced from the actual HF dataset (`mib-bench/ioi`) by scanning
+    ``scan_size`` train examples and collecting every distinct
+    ``name_A``/``name_B``/``name_C`` value, *unioned* with the harness's
+    ``tasks/IOI_task/names.json`` for completeness.
+
+    Why both: ``names.json`` ships ~99 names but the real ``mib-bench/ioi``
+    dataset uses a different set (~44 distinct names across the splits we
+    found, with only 10/44 overlapping ``names.json``). Scanning catches
+    the actually-used names; ``names.json`` adds belt-and-suspenders.
+
+    After ``resolve_tokens`` first-token compaction, this typically
+    reduces to ~50–80 dims under modern tokenisers.
+    """
+    from ..pipeline import MIB_TRACK
+    import json
+
+    names: set[str] = set()
+
+    # Pull from names.json (best-effort).
+    names_path = MIB_TRACK / "tasks" / "IOI_task" / "names.json"
+    if names_path.is_file():
+        try:
+            with names_path.open() as f:
+                names.update(str(n).strip() for n in json.load(f) if str(n).strip())
+        except Exception:
+            pass
+
+    # Pull from the actual dataset.
+    try:
+        import sys
+        sys.path.insert(0, str(MIB_TRACK))
+        sys.path.insert(0, str(MIB_TRACK / "CausalAbstraction"))
+        from tasks.IOI_task.ioi_task import get_counterfactual_datasets  # type: ignore[import-not-found]
+
+        datasets = get_counterfactual_datasets(hf=True, size=scan_size)
+        # Pick any one split (they all share the same name vocab).
+        ds = next(iter(datasets.values()))
+        for ex in ds:
+            inp = ex["input"]
+            for key in ("name_A", "name_B", "name_C"):
+                v = inp.get(key)
+                if isinstance(v, str) and v.strip():
+                    names.add(v.strip())
+    except Exception as e:
+        # If dataset scan fails (no HF cache, no network), fall back to
+        # whatever names.json gave us. The alphabet may be incomplete but
+        # the run can still proceed with on_unknown_label="skip".
+        print(f"[ioi-config] dataset scan failed ({e}); using names.json only.")
+
+    if not names:
+        raise RuntimeError(
+            "Could not assemble IOI name alphabet — both names.json and "
+            "dataset scan failed."
+        )
+    return tuple(sorted(names))
+
+
+def _ioi_v3_splits(variable: str) -> PlotConfig:
+    """IOI V=3 OT rows on the 3 non-``same`` counterfactual splits.
+
+    Each row interchanges ``variable`` (``output_token`` or
+    ``output_position``) on a different split's source distribution. The
+    splits sit at three distinct corners of the
+    ``(token_signal, position_signal)`` grid (see
+    ``ioi_learn_linear_params.py:88-93``):
+
+    | split                      | (pos, tok)  |
+    |----------------------------|-------------|
+    | s1_io_flip_train           | (-1, +1)    |
+    | s2_io_flip_train           | (-1, -1)    |
+    | s1_ioi_flip_s2_ioi_flip_t. | (+1, -1)    |
+
+    The fourth corner (``same``, +1 +1) gives a zero abstract row and is
+    excluded.
+
+    Signature alphabet: the IOI name vocabulary (~40 names). After
+    ``resolve_tokens`` compaction this typically lands at ~30–40 dims.
+
+    DAS hyperparameters match ``ioi_baselines.py``: ``n_features=32``,
+    ``epochs=2``, ``init_lr=1.0``, ``loss_and_metric_fn=ioi_loss_and_metric_fn``
+    (set in run.py's IOI branch since it imports the harness module at
+    runtime).
+    """
+    if variable not in ("output_token", "output_position"):
+        raise ValueError(
+            f"IOI variable must be 'output_token' or 'output_position'; "
+            f"got {variable!r}"
+        )
+    splits = ("s1_io_flip_train", "s2_io_flip_train", "s1_ioi_flip_s2_ioi_flip_train")
+    return PlotConfig(
+        # ``variables`` here are the OT-row LABELS (split short names) for
+        # reporting; the actual interchange uses ``calibration_variable``.
+        variables=tuple(s.replace("_train", "") for s in splits),
+        per_row_split_datasets=splits,
+        calibration_variable=variable,
+        letters="",
+        answer_strings=_ioi_names_alphabet(),
+        # IOI's causal model exposes its output as ``raw_output`` (the
+        # predicted name string), not ``answer``. The label is the full
+        # name verbatim — no projection needed (no ``label_from_output``).
+        output_key="raw_output",
+        on_unknown_label="skip",  # rare LM outputs may fall outside name vocab
+        cost_metric="sq_l2",
+        normalize_signatures=True,
+        stage_a_solver="ot",
+        stage_b_solver="ot",
+        sinkhorn_iters=200,
+        target_row_index=0,
+        stage_a_epsilon_grid=(0.01, 0.03),
+        stage_b_epsilon_grid=(0.003, 0.01, 0.03, 0.1),
+        stage_a_top_k_grid=(1,),
+        # IOI's Stage B picks heads within layer; with a single TokenPosition
+        # ``id="all"`` and many heads, top_k=1 forces the OT to actually
+        # select instead of keeping every head.
+        stage_b_top_k_grid=(1,),
     )
 
 
@@ -291,14 +518,43 @@ def default_config(
         overrides.setdefault("max_new_tokens", 2)
         overrides.setdefault("checker", _ravel_checker)
     elif task == "arithmetic":
-        raise NotImplementedError(
-            "arithmetic preset not implemented — single var, V=1 collapse risk; "
-            "needs bucketed PLOT or adjacent-variable workaround. Defer."
-        )
+        variant = overrides.pop("arithmetic_variant", "C")
+        if variant == "C":
+            plot_config = _arithmetic_v2_carry_children(variable)
+        elif variant == "B":
+            plot_config = _arithmetic_v4_operands(variable)
+        else:
+            raise ValueError(
+                f"Unknown arithmetic_variant {variant!r}; expected 'C' or 'B'."
+            )
+        signature_dataset = overrides.pop("signature_dataset", "random_train")
+        # Baseline (arithmetic_baselines.py:78-82,119-125): n_features=16,
+        # epochs=1, max_new_tokens=3 for Gemma / 1 for Llama. We default to
+        # max_new_tokens=3 (covers Gemma's multi-token answers); Llama can
+        # override down to 1 via CLI when we get to that cell.
+        overrides.setdefault("n_features", 16)
+        overrides.setdefault("training_epochs", 1)
+        overrides.setdefault("max_new_tokens", 3)
+        # Default smoke dataset_size; baseline uses 10_000 but smoke is fine
+        # for first cell. Override via --dataset-size for the real run.
+        overrides.setdefault("dataset_size", 256)
     elif task == "ioi_task":
-        raise NotImplementedError(
-            "ioi_task requires learned linear params bootstrap; not wired here."
+        plot_config = _ioi_v3_splits(variable)
+        # Signature dataset is overridden by the per-row split mode; pass
+        # any train split as the placeholder ``fit_dataset`` argument.
+        # The IOI variant of run.py routes to setup_attention_head_experiment
+        # which uses the per-row datasets directly.
+        signature_dataset = overrides.pop(
+            "signature_dataset", "s1_io_flip_train",
         )
+        # Match ioi_baselines.py:144-157 hyperparameters.
+        overrides.setdefault("n_features", 32)
+        overrides.setdefault("training_epochs", 2)
+        overrides.setdefault("init_lr", 1.0)
+        overrides.setdefault("max_new_tokens", 1)
+        overrides.setdefault("dataset_size", 256)  # smoke; baseline=full
+        # Conservative train batch size for 8 GB VRAM.
+        overrides.setdefault("train_batch_size", 32)
     else:
         raise ValueError(f"Unknown task {task!r}.")
 

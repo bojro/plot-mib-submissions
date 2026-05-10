@@ -82,15 +82,189 @@ Differences between shipped cells need to be read with this caveat:
 
 **To validate any cell's IIA as a "result," run it 3× with distinct seeds and report mean ± std.** Not done so far. Adding `--seed` to the CLI is straightforward but hasn't landed.
 
-## What this means for the multi-cell rollout (updated 2026-05-08)
+## 11. Tokenizer-specific alphabet gotchas (added 2026-05-08, arithmetic)
 
-Per-cell expectations, refined by data from cells 1–8 + RAVEL Continent smoke:
+The signature alphabet maps each label to its LM-vocab first-token id. For
+some tokenizer × label-set combinations, the obvious "encode `' ' + label`
+and take token 0" rule collapses the alphabet because the leading-space
+token is shared across labels. Concrete example: Gemma's tokenizer
+encodes ` A`..` Z` as single tokens (vocab merged) but ` 0`..` 9` as
+**two tokens each** — `[space_token, digit_token]`, with a single shared
+space_token (235248). The historic always-take-`encode(' '+lab)[0]` rule
+collapsed all 10 digit labels onto one dim, making the cost matrix
+uniform, the OT plan uniform, and IIA trivially 1.0 on every site.
 
-- **MCQA × Gemma**: validated. Cells 3 (`answer_pointer` = 0.955) and 4 (`answer` = 0.908) shipped. Both within 0.05 of cell 1's Qwen result.
-- **ARC × Gemma**: validated, with caveat. Cell 7 = 0.884, cell 8 = 0.923. The `top_k=2` Stage B and `correct_symbol`-doesn't-carry-answer issues (#8, #9) are now characterized but not yet fixed in the preset.
-- **RAVEL × Gemma × Continent**: smoke ran at 0.845 with tiny config (n_features=64, dataset_size=128, 1 epoch). Full-config rerun expected ≥0.90. **The cleanest PLOT result so far** — V=3 distinct attributes + per-row filter eliminates the no-op-base SNR drag that hurt MCQA-style runs.
-- **RAVEL × Gemma × {Country, Language}**: not yet run. Country has 160 distinct values (28 within-attribute first-token collisions); Language has 174 distinct values with **63% multi-token answers** — heaviest collision noise of the three RAVEL variables.
-- **Arithmetic** (`ones_carry`): single variable, V=1 collapse risk. Deferred; needs adjacent-variable workaround or bucketing.
-- **IOI** (`output_token`, `output_position`): two distinct outputs, V=2+ should work. **Bootstrap blocked** on per-model linear-parameter learning (`baselines/ioi_baselines/ioi_learn_linear_params.py`).
+**This is generic — any tokenizer that doesn't have merged vocab for
+your alphabet will hit this.** Llama-3 vs Gemma-2 vs Qwen-2 all
+tokenise digit-vs-letter-vs-word vocabularies differently. The fix in
+`_alphabets.py:resolve_tokens` is multi-rule: prefer single-token
+encoding (with or without leading space), else skip the leading-space
+token of the spaced encoding. Regression test in
+`test_alphabets_and_ravel.py::ResolveTokens::test_multi_token_spaced_label_skips_leading_space`.
 
-The honest expectation is that PLOT lands within ~0.05 of baseline DAS on RAVEL and most MCQA cells, with larger gaps on harder splits or where the variable is mid-network. The compute savings (PLOT's 4-7 sites vs baseline DAS's 72) remain real across all shipped cells.
+**Smoke check before any new (task × model) cell**: run
+`resolve_tokens(alphabet, tokenizer)` and assert `num_dims` matches the
+intended size. A 1-dim collapse is the canonical "you'll get IIA=1.0
+on everything" failure mode.
+
+## 12. Causal-model output node naming is task-specific (added 2026-05-08, arithmetic)
+
+MCQA / ARC / RAVEL expose their output as `causal_model.run_*()["answer"]`.
+Arithmetic exposes it as `["raw_output"]` (and the value is a multi-char
+string like "68" / "168", not a single label). The historic
+`_causal_letter_pairs` hardcoded `["answer"]` and was caught by a generic
+`KeyError` handler that silently skipped every example — producing an
+all-zero abstract table. New `output_key` and `label_from_output` config
+fields let each task declare its output node and any string→alphabet-key
+projection. Arithmetic uses `output_key="raw_output"` and
+`label_from_output=lambda s: s.strip()[:1]` to project multi-digit
+output strings to the first digit of the alphabet.
+
+Lesson: don't trust silent skips. Adding `print(f"skipped {n}/{total}")`
+inside the existing handler immediately surfaced the bug — without it,
+the run would have silently completed with degenerate signatures.
+
+## 13. PLOT signature picks loud direct-effect heads, misses indirect-effect heads (added 2026-05-09, IOI)
+
+**Affects: IOI cells 13, 14.** Confirmed by E-I-2 + A.
+
+PLOT's per-site signature aggregates *direct logit-diff effects* (first
+forward pass with the patched site, measure change in output logit
+diff). For attention heads, this rewards sites whose hidden-state has
+a large *direct* projection on the unembedding — Name Movers in IOI's
+GPT-2 (L9 H1, H2, H3, H5, H6, H9, H10, H11). Heads that contribute
+*indirectly* — by routing information into Name Movers, e.g.
+S-Inhibition heads at L7 H3, H9 and L8 H6, H10 — show small direct
+effects and are systematically passed over.
+
+Evidence: PLOT picked L9 Name Movers for both `output_token` and
+`output_position`. For `output_position` specifically, the L9 heads
+carry token info, not position info, so position-flip splits land at
+22+ MSE. Bypassing to S-Inhibition heads cuts mean MSE from 16.0 to
+**4.12** — within +1.92 of DAS baseline. The right heads exist; PLOT's
+signature can't see them.
+
+The cross-cutting "V-row coupling" hypothesis was tested via per-row
+independent OT (decoupling row marginal constraints in the Sinkhorn
+solver). It changed which heads PLOT picks (to L1 H1, L1 H2, L4 H0)
+but didn't help MSE (16.22 ≈ 16.0). The *solver* isn't the bug; the
+*signature* is. Closing this requires replacing the logit-diff-effect
+signature with one that captures cascading effects (e.g. ablation that
+breaks downstream heads), which is substantially more code than
+swapping solvers.
+
+**Decision (2026-05-09)**: ship pure PLOT for cells 13, 14 with the
+honest scores. The bypass diagnostic stays in `submissions/_plot_backups/`
+for reference. Future work tracked as H-IOI-NEW-1 in `HYPOTHESES.md`.
+
+## 14. PLOT site-selection ceilings on high-cardinality outputs (added 2026-05-09, RAVEL)
+
+**Affects: RAVEL Country (cell 21), RAVEL Language (cell 23).** Confirmed by E-R-4 + D + C-split.
+
+When the output variable has many classes (Country: 160 values,
+Language: 174 values), the per-site DAS rotation at any single late
+layer hits a hard ceiling around 0.6 IIA. E-R-4 tested 4 alternative
+(layer, position) pairs for Country; none beat PLOT's L25
+entity_last_token at 0.615. Even an *identity featurizer* (no rotation,
+full residual swap) at L25 gives the same 0.615 — DAS isn't adding
+value over identity at that site, suggesting the Country information
+is diffusely distributed across the L25 residual rather than isolated
+in any low-rank subspace a single rotation can capture.
+
+Adding more sites doesn't break the ceiling either: D ran with
+`stage_a_top_k=2` (4 picked sites: L5+L6+L24+L25 entity_last_token)
+and got 0.6148 highest-view — same as 2-site PLOT. The extra sites
+only drag the average-view down (0.563 vs 0.582 with 2 sites).
+
+The structural reading: PLOT's value proposition is "comparable IIA
+at far fewer sites than DAS." For high-cardinality outputs that
+distribute information broadly, "far fewer sites" pays for itself in
+expressivity. DAS baseline ships 72 sites; PLOT ships 2-4. The
+information that's spread across the remaining 68 sites isn't
+recoverable at our site count. Closing the gap would require either
+(a) PLOT trained as densely as DAS (defeats its compute savings) or
+(b) a different DAS architecture (more `n_features`, different loss),
+which is also out-of-scope for this submission.
+
+**Decision (2026-05-09)**: accept the gap and document. Cells 21
+(0.615) and 23 (0.629) ship as the honest outcome of PLOT's site
+selection on high-cardinality variables. Future work tracked as
+H-RAVEL-NEW-1 in `HYPOTHESES.md`.
+
+## 15. DAS rotation at a chosen site can score *worse* than the harness's identity featurizer at the same site (added 2026-05-10, ARC)
+
+**Affects: ARC × Gemma × answer (cell 8). Possibly other late-layer
+last-token sites.** Surfaced by D.7's `stage_b_top_k_grid=(1,)` rerun.
+
+The MIB harness scores each `(layer, token_position)` site at every
+picked layer. Where a featurizer is shipped, eval uses the trained
+featurizer; where it isn't, eval falls back to a default
+`Featurizer(n_features=hidden_size)` — an **identity**, full-residual
+swap. See
+`MIB-causal-variable-track/CausalAbstraction/experiments/residual_stream_experiment.py:227`.
+
+**Empirical evidence — cell 8 ARC × Gemma × answer at L25 last_token:**
+
+| config | what was at L25 last_token | IIA |
+|---|---|---|
+| Original (`top_k_grid=(1,2)`) | trained DAS rotation (Stage B picked both positions per layer) | **0.764** |
+| D.7 (`top_k_grid=(1,)`) | identity featurizer (Stage B only picks 1 position; eval fills in identity at the other) | **0.999** |
+
+The trained rotation was **0.235 IIA worse than identity** at the same
+site. DAS at this site is *subtractive*: the orthogonal-rotation
+parameterisation actively hurts the swap.
+
+**Why this can happen:** when the residual at a late-layer last-token
+position already cleanly encodes the answer (i.e. the unembedding maps
+that residual direction to the correct logit with high probability),
+a full residual swap from base→source flips the answer near-perfectly
+under identity. DAS-trained rotations restrict the swap to a learned
+subspace; on training data with limited sample size, the rotation
+over-fits to a noisy direction and the held-out swap is less effective
+than just swapping the whole residual.
+
+**Implication for `top_k_grid`:** the previous SHORTCOMINGS §8 read
+"Stage B `top_k_grid=(1,2)` degenerates on tasks with only 2 token
+positions" because both positions get picked and weak DAS dilutes the
+joint result. We tightened ARC to `(1,)` for D.7 to avoid that. The
+side effect — discovered after the rerun — is that the harness then
+scores identity at the un-trained position, and identity sometimes
+beats the DAS rotation. Tightening `top_k` was net-positive on cell 8
+(0.849 → 0.999 highest-view) precisely *because* it left more positions
+to identity-fallback.
+
+**Implication for cells generally:** PLOT's value-add is layer
+selection (Stage A); position selection (Stage B) and DAS training
+both add risk on top. Where the residual already works under identity,
+the layer pick alone is enough — Stage B's correct/incorrect choice
+matters less than expected, and DAS can be a regression. A "leaner
+PLOT" that ships only Stage A picks (with no Stage B narrowing) and
+relies entirely on the harness's automatic identity-fallback at every
+position would be functionally equivalent in the best-position case
+and avoid the DAS-subtractive-failure mode.
+
+**Decision (2026-05-10)**: ship the D.7-tweaked submissions (cells 7,
+8). Keep `top_k_grid=(1,)` for ARC. Future work: an ablation that
+trains DAS at all picked positions vs only the chosen one would
+quantify how often DAS is subtractive — a candidate for the next
+diagnostic session.
+
+## What this means for the multi-cell rollout (updated 2026-05-10)
+
+Per-cell expectations, post-overnight + post-diagnostic-session:
+
+- **MCQA × Qwen × answer_pointer (cell 1)**: shipped. Seed sweep (3 seeds) gave 1.000 ± 0.000 highest-view (vs original 0.8915, vs DAS LB 1.000). The original gap was seed noise; now matching DAS LB.
+- **MCQA × Qwen × answer (cell 2)**: -0.125 gap. Per §2, structural. **Decision: accept and document.**
+- **MCQA × Gemma × answer_pointer (cell 3)**: shipped. Seed sweep gave 0.923 ± 0.006 (vs DAS LB 0.974, gap -0.051 outside seed band). Real ~5% structural gap.
+- **MCQA × Gemma × answer (cell 4)**: shipped. Seed sweep gave 0.904 ± 0.010 (vs DAS LB 0.974, gap -0.070 outside seed band). Real ~7% structural gap.
+- **ARC × Gemma × answer_pointer (cell 7)**: shipped at 0.827 (D.7 config; identical to pre-tweak). The `correct_symbol`-doesn't-carry-answer issue (#9) is the residual gap to DAS LB 0.836.
+- **ARC × Gemma × answer (cell 8)**: shipped at **0.999 highest-view** with D.7 config (top_k=1). Up from 0.849 pre-D.7. The improvement is real per §15: tightening top_k let identity fall through at L25 last_token where DAS was actively subtractive.
+- **RAVEL × Gemma × Continent (cell 22)**: shipped at 0.856 (full settings). Tied with DAS baseline (+0.008). PLOT's strongest result.
+- **RAVEL × Gemma × Country (cell 21)**: shipped at 0.615. **Decision: accept; structural per §14.**
+- **RAVEL × Gemma × Language (cell 23)**: shipped at 0.629. **Decision: accept; structural per §14.**
+- **Arithmetic × Gemma (cell 11)**: shipped at smoke 0.440. ds=1024 scale-up REGRESSED to 0.265 (different layers picked, ones_carry_test ~0); reverted to smoke. Future work: rerun with `--signature-dataset ones_carry_train`.
+- **IOI** (cells 13, 14): shipped at 5.16 / 16.0 MSE. **Decision: accept pure-PLOT scores; structural per §13.**
+
+The honest expectation is that PLOT lands within ~0.05 of baseline DAS on the cells where its V-row + signature design is well-matched (cells 1, 7, 8, 22). On structural-mismatch cells (2, 13, 14, 21, 23) the gap is larger and **closing it is out-of-scope for this submission** — see §2, §13, §14, §15 + `HYPOTHESES.md`.
+
+The compute savings (PLOT's 2-7 sites vs baseline DAS's 72) remain real across all shipped cells.

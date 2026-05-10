@@ -10,8 +10,8 @@
             "layer": 6,
             "position": "last_token"
           },
-          "Continent": {
-            "average_score": 0.7868525896414342
+          "Language": {
+            "average_score": 0.601593625498008
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-entity_last_token)')]]": {
@@ -19,8 +19,8 @@
             "layer": 6,
             "position": "entity_last_token"
           },
-          "Continent": {
-            "average_score": 0.7948207171314741
+          "Language": {
+            "average_score": 0.5358565737051793
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-last_token)')]]": {
@@ -28,8 +28,8 @@
             "layer": 25,
             "position": "last_token"
           },
-          "Continent": {
-            "average_score": 0.23705179282868527
+          "Language": {
+            "average_score": 0.44621513944223107
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-entity_last_token)')]]": {
@@ -37,8 +37,8 @@
             "layer": 25,
             "position": "entity_last_token"
           },
-          "Continent": {
-            "average_score": 0.852589641434263
+          "Language": {
+            "average_score": 0.6374501992031872
           }
         }
       }
@@ -50,8 +50,8 @@
             "layer": 6,
             "position": "last_token"
           },
-          "Continent": {
-            "average_score": 0.6245136186770428
+          "Language": {
+            "average_score": 0.4688715953307393
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-entity_last_token)')]]": {
@@ -59,8 +59,8 @@
             "layer": 6,
             "position": "entity_last_token"
           },
-          "Continent": {
-            "average_score": 0.7976653696498055
+          "Language": {
+            "average_score": 0.49416342412451364
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-last_token)')]]": {
@@ -68,8 +68,8 @@
             "layer": 25,
             "position": "last_token"
           },
-          "Continent": {
-            "average_score": 0.03696498054474708
+          "Language": {
+            "average_score": 0.058365758754863814
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-entity_last_token)')]]": {
@@ -77,8 +77,8 @@
             "layer": 25,
             "position": "entity_last_token"
           },
-          "Continent": {
-            "average_score": 0.8618677042801557
+          "Language": {
+            "average_score": 0.6050583657587548
           }
         }
       }
@@ -90,8 +90,8 @@
             "layer": 6,
             "position": "last_token"
           },
-          "Continent": {
-            "average_score": 0.2959770114942529
+          "Language": {
+            "average_score": 0.27298850574712646
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-entity_last_token)')]]": {
@@ -99,8 +99,8 @@
             "layer": 6,
             "position": "entity_last_token"
           },
-          "Continent": {
-            "average_score": 0.7816091954022989
+          "Language": {
+            "average_score": 0.5272988505747126
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-last_token)')]]": {
@@ -108,8 +108,8 @@
             "layer": 25,
             "position": "last_token"
           },
-          "Continent": {
-            "average_score": 0.28304597701149425
+          "Language": {
+            "average_score": 0.2600574712643678
           }
         },
         "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-entity_last_token)')]]": {
@@ -117,8 +117,8 @@
             "layer": 25,
             "position": "entity_last_token"
           },
-          "Continent": {
-            "average_score": 0.8520114942528736
+          "Language": {
+            "average_score": 0.6436781609195402
           }
         }
       }

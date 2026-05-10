@@ -419,6 +419,17 @@ def emit_results_md(results: List[CellResult]) -> str:
             "exceeded an identity-baseline threshold on at least one split.\n"
         )
 
+    out.append(
+        "\n‡ **Cell 8 ARC × Gemma × answer (0.999)** is driven by the "
+        "harness's automatic identity-fallback at L25 last_token — a position "
+        "PLOT did not pick to train. PLOT's actually-trained DAS rotations "
+        "scored 0.04–0.79 at this cell. The win is methodologically valid "
+        "per the eval's scoring rules (it scores every position at picked "
+        "layers, defaulting to identity at unselected positions) but is not "
+        "a direct PLOT-rotation result. See "
+        "`mib_submission/PLOT_SHORTCOMINGS.md` §15 for the full mechanism.\n"
+    )
+
     # Compare-to-baseline rows where we have leaderboard DAS numbers.
     out.append("### Comparison to baseline DAS (leaderboard)\n")
     out.append("Baseline DAS scores from the public MIB leaderboard. PLOT trains DAS at "
