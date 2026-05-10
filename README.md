@@ -1,6 +1,8 @@
 # PLOT MIB submission
 
-PLOT (Progressive Localized Optimal Transport) submissions to the [MIB Causal Variable Localization Track](https://github.com/aaronmueller/MIB). PLOT picks `(layer, token-position)` sites via two-stage Sinkhorn OT, then trains DAS rotations only at the picked sites — targeting baseline-DAS-comparable accuracy at ≤10× fewer rotations trained.
+PLOT (**Progressive Localization via Optimal Transport**) submissions to the [MIB Causal Variable Localization Track](https://github.com/aaronmueller/MIB). PLOT picks `(layer, token-position)` sites via two-stage Sinkhorn OT, then trains DAS rotations only at the picked sites — targeting baseline-DAS-comparable accuracy at ≤10× fewer rotations trained.
+
+What this repo ships is the **PLOT-DAS** variant from the source paper (Stage A + Stage B + DAS at picked sites). Other PLOT variants in the paper — `PLOT` (localization only), `PLOT-native` / `PLOT-PCA` (Stage B handles in native or PCA coords), `Full DAS` — aren't implemented here. Source repo for the paper: <https://github.com/jchang153/causal-abstractions-ot>.
 
 ## Headline status
 

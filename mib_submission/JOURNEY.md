@@ -1,6 +1,6 @@
 # Porting PLOT to the MIB Causal Variable Track
 
-A process log of converting PLOT (Progressive Localized Optimal Transport) from its binary-addition origin to a MIB submission for `4_answer_MCQA × Qwen2.5-0.5B × answer_pointer`. Documents what worked, what didn't, what we learned about the method's structural limits, and where the final submission lands relative to baseline DAS.
+A process log of converting PLOT (Progressive Localization via Optimal Transport) from its binary-addition origin to a MIB submission for `4_answer_MCQA × Qwen2.5-0.5B × answer_pointer`. Documents what worked, what didn't, what we learned about the method's structural limits, and where the final submission lands relative to baseline DAS.
 
 ## Starting point
 

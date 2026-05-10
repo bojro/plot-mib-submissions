@@ -1,6 +1,8 @@
 # PLOT shortcomings — a reasonable assessment
 
-Notes on the structural limits of PLOT (Progressive Localized Optimal Transport) as a site-selection method, drawn from the MCQA × Qwen-2.5-0.5B porting effort. Documented as a reference when interpreting PLOT's results on other cells and when comparing against baseline DAS.
+Notes on the structural limits of PLOT (**Progressive Localization via Optimal Transport**) as a site-selection method, drawn from the MCQA × Qwen-2.5-0.5B porting effort. Documented as a reference when interpreting PLOT's results on other cells and when comparing against baseline DAS.
+
+This repo specifically implements **PLOT-DAS** — Stage A (layer OT) + Stage B (per-layer position OT) + DAS rotation training at picked sites. The source paper also defines `PLOT` (localization only), `PLOT-native` / `PLOT-PCA` (Stage B native or PCA-basis handles), and `Full DAS`. Several of the limits below are PLOT-DAS-specific; some apply to all PLOT variants.
 
 PLOT's core value proposition stands: it trains DAS at a small handful of OT-selected sites instead of all 72, giving roughly an order-of-magnitude reduction in DAS rotation training. None of the shortcomings below invalidate that. They explain where the gap to baseline DAS comes from on harder cells.
 

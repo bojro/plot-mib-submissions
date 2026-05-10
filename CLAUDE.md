@@ -4,7 +4,9 @@ Project guidance for Claude Code (claude.ai/code) when working in this repositor
 
 ## Repository purpose
 
-Standalone repo for PLOT (Progressive Localized Optimal Transport) submissions to the MIB Causal Variable Localization Track. PLOT picks (layer, token-position) sites via two-stage Sinkhorn OT, then trains DAS rotations only at the picked sites — targeting baseline-DAS-comparable accuracy at ~10× fewer rotations trained.
+Standalone repo for PLOT (**Progressive Localization via Optimal Transport**) submissions to the MIB Causal Variable Localization Track. PLOT picks (layer, token-position) sites via two-stage Sinkhorn OT, then trains DAS rotations only at the picked sites — targeting baseline-DAS-comparable accuracy at ~10× fewer rotations trained.
+
+What our pipeline implements is what the source paper calls **PLOT-DAS** (Stage A + Stage B + DAS restricted to picked sites). The source paper also defines `PLOT` (localization-only), `PLOT-native` / `PLOT-PCA` (Stage B handles in native coordinates or PCA basis), and `Full DAS` (all sites). Source repo: <https://github.com/jchang153/causal-abstractions-ot> — main-paper experiments organized under `experiments/heq/`, `experiments/binary_addition/`, and `experiments/mcqa/`.
 
 - Method narrative + cell-1 port story: `mib_submission/JOURNEY.md`.
 - Structural limits of the method: `mib_submission/PLOT_SHORTCOMINGS.md`.
@@ -16,7 +18,7 @@ Source-of-truth PLOT (binary-addition GRU origin) is preserved offline at `refer
 
 ## MIB Causal Variable Track — submission plan
 
-Goal: benchmark **PLOT only** (Progressive Localized Optimal Transport — OT site selection + DAS rotation training at picked sites) on the MIB Causal Variable Localization Track. Earlier scope included raw OT / GW / FGW / UOT / OT+gradient / OT+PCA; those are dropped. Circuit track is out of scope.
+Goal: benchmark **PLOT-DAS** (Progressive Localization via Optimal Transport — OT site selection + DAS rotation training at picked sites; the variant from the source paper that ships the trained handle) on the MIB Causal Variable Localization Track. Earlier scope included raw OT / GW / FGW / UOT / OT+gradient / OT+PCA; those are dropped. Circuit track is out of scope.
 
 Total target cells = **26** (constrained by `verify_submission.py:VALID_TASK_MODELS`):
 - ioi_task: 2 vars × 4 models = 8

@@ -1,4 +1,4 @@
-"""PLOT — Progressive Localized Optimal Transport for MIB submissions.
+"""PLOT — Progressive Localization via Optimal Transport for MIB submissions.
 
 Two-stage hierarchical OT site selection followed by DAS-trained rotations:
 
